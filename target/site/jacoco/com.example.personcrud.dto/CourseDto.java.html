@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CourseDto.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">person-crud</a> &gt; <a href="index.source.html" class="el_package">com.example.personcrud.dto</a> &gt; <span class="el_source">CourseDto.java</span></div><h1>CourseDto.java</h1><pre class="source lang-java linenums">package com.example.personcrud.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class CourseDto {
+
+    private Long id;
+
+    @NotBlank
+    @Size(max = 100)
+    private String name;
+
+    private Long teacherId;
+
+<span class="fc" id="L19">    private List&lt;Long&gt; studentIds = new ArrayList&lt;&gt;();</span>
+
+<span class="fc" id="L21">    public CourseDto() {</span>
+<span class="fc" id="L22">    }</span>
+
+<span class="fc" id="L24">    public CourseDto(Long id, String name, Long teacherId, List&lt;Long&gt; studentIds) {</span>
+<span class="fc" id="L25">        this.id = id;</span>
+<span class="fc" id="L26">        this.name = name;</span>
+<span class="fc" id="L27">        this.teacherId = teacherId;</span>
+<span class="fc" id="L28">        this.studentIds = studentIds;</span>
+<span class="fc" id="L29">    }</span>
+
+    public Long getId() {
+<span class="fc" id="L32">        return id;</span>
+    }
+
+    public void setId(Long id) {
+<span class="fc" id="L36">        this.id = id;</span>
+<span class="fc" id="L37">    }</span>
+
+    public String getName() {
+<span class="fc" id="L40">        return name;</span>
+    }
+
+    public void setName(String name) {
+<span class="fc" id="L44">        this.name = name;</span>
+<span class="fc" id="L45">    }</span>
+
+    public Long getTeacherId() {
+<span class="fc" id="L48">        return teacherId;</span>
+    }
+
+    public void setTeacherId(Long teacherId) {
+<span class="fc" id="L52">        this.teacherId = teacherId;</span>
+<span class="fc" id="L53">    }</span>
+
+    public List&lt;Long&gt; getStudentIds() {
+<span class="fc" id="L56">        return studentIds;</span>
+    }
+
+    public void setStudentIds(List&lt;Long&gt; studentIds) {
+<span class="fc" id="L60">        this.studentIds = studentIds;</span>
+<span class="fc" id="L61">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

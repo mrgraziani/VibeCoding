@@ -1,0 +1,12 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+person-crud,com.example.personcrud,PersonCrudApplication,5,3,0,0,2,1,1,1,1,1
+person-crud,com.example.personcrud.controller,PersonController,0,109,0,0,0,21,0,9,0,9
+person-crud,com.example.personcrud.controller,CourseController,1,160,3,3,0,26,3,11,0,11
+person-crud,com.example.personcrud.model,Teacher,0,9,0,0,0,4,0,2,0,2
+person-crud,com.example.personcrud.model,Student,0,9,0,0,0,4,0,2,0,2
+person-crud,com.example.personcrud.model,Person,0,43,0,0,0,19,0,10,0,10
+person-crud,com.example.personcrud.model,Course,14,36,0,0,4,15,1,9,1,9
+person-crud,com.example.personcrud.dto,PersonDto,0,46,0,0,0,20,0,10,0,10
+person-crud,com.example.personcrud.dto,CourseDto,0,56,0,0,0,21,0,10,0,10
+person-crud,com.example.personcrud.service,CourseService,0,157,6,6,0,30,6,13,0,13
+person-crud,com.example.personcrud.service,PersonService,0,61,0,0,0,15,0,8,0,8

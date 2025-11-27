@@ -1,0 +1,13 @@
+/usr/src/mymaven/src/main/java/com/example/personcrud/dto/CourseDto.java
+/usr/src/mymaven/src/main/java/com/example/personcrud/model/Student.java
+/usr/src/mymaven/src/main/java/com/example/personcrud/model/Person.java
+/usr/src/mymaven/src/main/java/com/example/personcrud/dto/PersonDto.java
+/usr/src/mymaven/src/main/java/com/example/personcrud/controller/PersonController.java
+/usr/src/mymaven/src/main/java/com/example/personcrud/PersonCrudApplication.java
+/usr/src/mymaven/src/main/java/com/example/personcrud/controller/CourseController.java
+/usr/src/mymaven/src/main/java/com/example/personcrud/model/Course.java
+/usr/src/mymaven/src/main/java/com/example/personcrud/service/PersonService.java
+/usr/src/mymaven/src/main/java/com/example/personcrud/repository/PersonRepository.java
+/usr/src/mymaven/src/main/java/com/example/personcrud/model/Teacher.java
+/usr/src/mymaven/src/main/java/com/example/personcrud/repository/CourseRepository.java
+/usr/src/mymaven/src/main/java/com/example/personcrud/service/CourseService.java

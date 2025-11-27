@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CourseController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">person-crud</a> &gt; <a href="index.source.html" class="el_package">com.example.personcrud.controller</a> &gt; <span class="el_source">CourseController.java</span></div><h1>CourseController.java</h1><pre class="source lang-java linenums">package com.example.personcrud.controller;
+
+import com.example.personcrud.dto.CourseDto;
+import com.example.personcrud.model.Course;
+import com.example.personcrud.model.Student;
+import com.example.personcrud.model.Teacher;
+import com.example.personcrud.service.CourseService;
+import com.example.personcrud.repository.PersonRepository;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping(&quot;/api/courses&quot;)
+public class CourseController {
+
+    private final CourseService service;
+    private final PersonRepository personRepository;
+
+<span class="fc" id="L24">    public CourseController(CourseService service, PersonRepository personRepository) {</span>
+<span class="fc" id="L25">        this.service = service;</span>
+<span class="fc" id="L26">        this.personRepository = personRepository;</span>
+<span class="fc" id="L27">    }</span>
+
+    private CourseDto toDto(Course c) {
+<span class="fc" id="L30">        List&lt;Long&gt; studentIds = c.getStudents().stream().map(Student::getId).collect(Collectors.toList());</span>
+<span class="pc bpc" id="L31" title="1 of 2 branches missed.">        Long teacherId = c.getTeacher() != null ? c.getTeacher().getId() : null;</span>
+<span class="fc" id="L32">        return new CourseDto(c.getId(), c.getName(), teacherId, studentIds);</span>
+    }
+
+    private Course toEntity(CourseDto d) {
+<span class="fc" id="L36">        Course c = new Course();</span>
+<span class="fc" id="L37">        c.setId(d.getId());</span>
+<span class="fc" id="L38">        c.setName(d.getName());</span>
+<span class="pc bpc" id="L39" title="1 of 2 branches missed.">        if (d.getTeacherId() != null) {</span>
+<span class="fc" id="L40">            personRepository.findById(d.getTeacherId()).ifPresent(p -&gt; c.setTeacher((Teacher) p));</span>
+        }
+<span class="pc bpc" id="L42" title="1 of 2 branches missed.">        if (d.getStudentIds() != null) {</span>
+<span class="fc" id="L43">            List&lt;Student&gt; students = d.getStudentIds().stream()</span>
+<span class="fc" id="L44">                    .map(id -&gt; personRepository.findById(id).map(p -&gt; (Student) p).orElse(null))</span>
+<span class="fc" id="L45">                    .filter(java.util.Objects::nonNull)</span>
+<span class="fc" id="L46">                    .collect(Collectors.toList());</span>
+<span class="fc" id="L47">            c.setStudents(students);</span>
+        }
+<span class="fc" id="L49">        return c;</span>
+    }
+
+    @GetMapping
+    public List&lt;CourseDto&gt; list() {
+<span class="fc" id="L54">        return service.findAll().stream().map(this::toDto).collect(Collectors.toList());</span>
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;CourseDto&gt; get(@PathVariable Long id) {
+<span class="fc" id="L59">        return service.findById(id).map(this::toDto).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());</span>
+    }
+
+    @PostMapping
+    public ResponseEntity&lt;CourseDto&gt; create(@Valid @RequestBody CourseDto dto) {
+<span class="fc" id="L64">        Course created = service.create(toEntity(dto));</span>
+<span class="fc" id="L65">        return ResponseEntity.status(HttpStatus.CREATED).body(toDto(created));</span>
+    }
+
+    @PutMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;CourseDto&gt; update(@PathVariable Long id, @Valid @RequestBody CourseDto dto) {
+<span class="fc" id="L70">        return service.update(id, toEntity(dto)).map(this::toDto).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());</span>
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Void&gt; delete(@PathVariable Long id) {
+<span class="fc" id="L75">        service.delete(id);</span>
+<span class="fc" id="L76">        return ResponseEntity.noContent().build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>

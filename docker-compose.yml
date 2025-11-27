@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  person-crud:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/persons"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://person-crud:8080/api
+    ports:
+      - "3000:80"
+    depends_on:
+      person-crud:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  default:
+    name: personcrud_net

@@ -1,0 +1,13 @@
+com/example/personcrud/dto/CourseDto.class
+com/example/personcrud/dto/PersonDto.class
+com/example/personcrud/model/Teacher.class
+com/example/personcrud/model/Person.class
+com/example/personcrud/PersonCrudApplication.class
+com/example/personcrud/service/CourseService.class
+com/example/personcrud/repository/PersonRepository.class
+com/example/personcrud/controller/PersonController.class
+com/example/personcrud/model/Course.class
+com/example/personcrud/service/PersonService.class
+com/example/personcrud/repository/CourseRepository.class
+com/example/personcrud/controller/CourseController.class
+com/example/personcrud/model/Student.class
