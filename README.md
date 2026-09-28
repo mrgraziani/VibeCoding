@@ -1,1 +1,1 @@
-This code was a test, where I try to create a well done product with Backend and Frontend only asking IA to touch code and no changes done by me.
+Experiment: every line of code here was written by an AI agent from prompts only — I never edited it. It is deliberately unreviewed.
