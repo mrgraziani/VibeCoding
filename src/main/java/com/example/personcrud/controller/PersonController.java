@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/persons")
@@ -24,34 +23,37 @@ public class PersonController {
     }
 
     private PersonDto toDto(Person p) {
-        PersonDto dto = new PersonDto(p.getId(), p.getFirstName(), p.getLastName(), p.getEmail());
-        if (p instanceof Teacher) dto.setPersonType("TEACHER");
-        else if (p instanceof Student) dto.setPersonType("STUDENT");
-        else dto.setPersonType("PERSON");
-        return dto;
+        // Pattern matching on entity type with unnamed patterns (_)
+        String type = switch (p) {
+            case Teacher _ -> "TEACHER";
+            case Student _ -> "STUDENT";
+            case Person _ -> "PERSON";
+        };
+        return new PersonDto(p.getId(), p.getFirstName(), p.getLastName(), p.getEmail(), type);
     }
 
     private Person toEntity(PersonDto d) {
-        Person p;
-        if ("TEACHER".equals(d.getPersonType())) {
-            p = new Teacher(d.getFirstName(), d.getLastName(), d.getEmail());
-        } else if ("STUDENT".equals(d.getPersonType())) {
-            p = new Student(d.getFirstName(), d.getLastName(), d.getEmail());
-        } else {
-            p = new Person(d.getFirstName(), d.getLastName(), d.getEmail());
-        }
-        p.setId(d.getId());
+        // Record Patterns and Pattern Matching for switch with unnamed patterns (_) and guards (when)
+        Person p = switch (d) {
+            case PersonDto(_, var first, var last, var email, var type) when "TEACHER".equals(type) ->
+                    new Teacher(first, last, email);
+            case PersonDto(_, var first, var last, var email, var type) when "STUDENT".equals(type) ->
+                    new Student(first, last, email);
+            case PersonDto(_, var first, var last, var email, _) ->
+                    new Person(first, last, email);
+        };
+        p.setId(d.id());
         return p;
     }
 
     @GetMapping
     public List<PersonDto> list() {
-        return service.findAll().stream().map(this::toDto).collect(Collectors.toList());
+        return service.findAll().stream().map(this::toDto).toList();
     }
 
     @GetMapping("/search")
     public List<PersonDto> findByLastName(@RequestParam String lastName) {
-        return service.findByLastName(lastName).stream().map(this::toDto).collect(Collectors.toList());
+        return service.findByLastName(lastName).stream().map(this::toDto).toList();
     }
 
     @GetMapping("/{id}")

@@ -3,6 +3,7 @@ package com.example.personcrud.model;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.SequencedCollection;
 
 @Entity
 public class Course {
@@ -59,6 +60,20 @@ public class Course {
     }
 
     public void setStudents(List<Student> students) {
-        this.students = students;
+        this.students = students != null ? new ArrayList<>(students) : new ArrayList<>();
+    }
+
+    // --- Sequenced Collections (JEP 431) methods ---
+
+    public Student getFirstEnrolledStudent() {
+        return students.isEmpty() ? null : students.getFirst();
+    }
+
+    public Student getLastEnrolledStudent() {
+        return students.isEmpty() ? null : students.getLast();
+    }
+
+    public SequencedCollection<Student> getStudentsReversed() {
+        return students.reversed();
     }
 }

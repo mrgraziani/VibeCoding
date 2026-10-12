@@ -1,9 +1,12 @@
 package com.example.personcrud.controller;
 
 import com.example.personcrud.dto.CourseDto;
+import com.example.personcrud.dto.PersonDto;
 import com.example.personcrud.model.Course;
+import com.example.personcrud.model.Person;
 import com.example.personcrud.model.Student;
 import com.example.personcrud.model.Teacher;
+import com.example.personcrud.service.AcademicAuditService;
 import com.example.personcrud.service.CourseService;
 import com.example.personcrud.repository.PersonRepository;
 import jakarta.validation.Valid;
@@ -12,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/courses")
@@ -20,30 +23,47 @@ public class CourseController {
 
     private final CourseService service;
     private final PersonRepository personRepository;
+    private final AcademicAuditService auditService;
 
-    public CourseController(CourseService service, PersonRepository personRepository) {
+    public CourseController(CourseService service,
+                            PersonRepository personRepository,
+                            AcademicAuditService auditService) {
         this.service = service;
         this.personRepository = personRepository;
+        this.auditService = auditService;
     }
 
     private CourseDto toDto(Course c) {
-        List<Long> studentIds = c.getStudents().stream().map(Student::getId).collect(Collectors.toList());
+        List<Long> studentIds = c.getStudents().stream().map(Student::getId).toList();
         Long teacherId = c.getTeacher() != null ? c.getTeacher().getId() : null;
         return new CourseDto(c.getId(), c.getName(), teacherId, studentIds);
     }
 
     private Course toEntity(CourseDto d) {
         Course c = new Course();
-        c.setId(d.getId());
-        c.setName(d.getName());
-        if (d.getTeacherId() != null) {
-            personRepository.findById(d.getTeacherId()).ifPresent(p -> c.setTeacher((Teacher) p));
+        c.setId(d.id());
+        c.setName(d.name());
+
+        if (d.teacherId() != null) {
+            personRepository.findById(d.teacherId()).ifPresent(p -> {
+                switch (p) {
+                    case Teacher t -> c.setTeacher(t);
+                    case Student _ -> throw new IllegalArgumentException("Cannot assign student as teacher");
+                    case Person _ -> throw new IllegalArgumentException("Unknown person type");
+                }
+            });
         }
-        if (d.getStudentIds() != null) {
-            List<Student> students = d.getStudentIds().stream()
-                    .map(id -> personRepository.findById(id).map(p -> (Student) p).orElse(null))
-                    .filter(java.util.Objects::nonNull)
-                    .collect(Collectors.toList());
+
+        if (d.studentIds() != null) {
+            List<Student> students = d.studentIds().stream()
+                    .map(id -> personRepository.findById(id)
+                            .map(p -> switch (p) {
+                                case Student s -> s;
+                                case Person _ -> null;
+                            })
+                            .orElse(null))
+                    .filter(Objects::nonNull)
+                    .toList();
             c.setStudents(students);
         }
         return c;
@@ -51,7 +71,7 @@ public class CourseController {
 
     @GetMapping
     public List<CourseDto> list() {
-        return service.findAll().stream().map(this::toDto).collect(Collectors.toList());
+        return service.findAll().stream().map(this::toDto).toList();
     }
 
     @GetMapping("/{id}")
@@ -74,5 +94,46 @@ public class CourseController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // --- Modern Feature Endpoints ---
+
+    /**
+     * Exposes Stream Gatherers (cohort windows) over HTTP.
+     */
+    @GetMapping("/{id}/cohorts")
+    public List<List<Long>> getCohorts(@PathVariable Long id, @RequestParam(defaultValue = "3") int size) {
+        return service.getStudentCohorts(id, size).stream()
+                .map(group -> group.stream().map(Student::getId).toList())
+                .toList();
+    }
+
+    /**
+     * Exposes Sequenced Collections (first, last, reversed).
+     */
+    @GetMapping("/{id}/students/first")
+    public ResponseEntity<PersonDto> getFirstStudent(@PathVariable Long id) {
+        return service.getFirstStudent(id)
+                .map(s -> new PersonDto(s.getId(), s.getFirstName(), s.getLastName(), s.getEmail(), "STUDENT"))
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/students/last")
+    public ResponseEntity<PersonDto> getLastStudent(@PathVariable Long id) {
+        return service.getLastStudent(id)
+                .map(s -> new PersonDto(s.getId(), s.getFirstName(), s.getLastName(), s.getEmail(), "STUDENT"))
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Exposes audit events described via Pattern Matching for switch with Record Patterns.
+     */
+    @GetMapping("/audit-log")
+    public List<String> getAuditLog() {
+        return auditService.getAuditLog().stream()
+                .map(auditService::describeEvent)
+                .toList();
     }
 }

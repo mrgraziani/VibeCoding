@@ -1,0 +1,12 @@
+# Maven build output
+target/
+
+# IDE & Editor settings
+.vscode/
+.cursor/
+
+# Python Virtual Environment
+.pdf-venv/
+
+# OS metadata
+.DS_Store

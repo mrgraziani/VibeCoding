@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Gatherers;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -48,29 +49,24 @@ public class DataInitializer implements CommandLineRunner {
             students.add((Student) personRepository.save(s));
         }
 
-        // Create 5 courses with specific student distribution: 5,5,4,3,3
-        int[] sizes = {5, 5, 4, 3, 3};
+        // Use Stream Gatherers (Gatherers.windowFixed) to partition students into 5 cohorts of 4 students each
+        List<List<Student>> cohorts = students.stream()
+                .gather(Gatherers.windowFixed(4))
+                .toList();
+
         List<Course> courses = new ArrayList<>();
-        int studentIndex = 0;
-        for (int i = 0; i < sizes.length; i++) {
+        for (int i = 0; i < cohorts.size(); i++) {
             Course c = new Course();
             c.setName("Course " + (i + 1));
-
-            // assign teacher round-robin (so first teacher gets first course)
+            // Round-robin teacher assignment
             Teacher t = savedTeachers.get(i % savedTeachers.size());
             c.setTeacher(t);
-
-            int size = sizes[i];
-            int end = Math.min(studentIndex + size, students.size());
-            List<Student> sub = students.subList(studentIndex, end);
-            c.setStudents(new ArrayList<>(sub));
-            studentIndex = end;
-
+            c.setStudents(new ArrayList<>(cohorts.get(i)));
             courses.add(c);
         }
 
         courseRepository.saveAll(courses);
 
-        System.out.println("Seeded database with " + savedTeachers.size() + " teachers, " + students.size() + " students and " + courses.size() + " courses.");
+        System.out.println("Seeded database with " + savedTeachers.size() + " teachers, " + students.size() + " students and " + courses.size() + " courses using Stream Gatherers.");
     }
 }

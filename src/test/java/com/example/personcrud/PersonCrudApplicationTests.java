@@ -1,6 +1,8 @@
 package com.example.personcrud;
 
 import com.example.personcrud.dto.PersonDto;
+import com.example.personcrud.model.Student;
+import com.example.personcrud.model.Teacher;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,9 +14,10 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(classes = PersonCrudApplication.class)
 @AutoConfigureMockMvc
 class PersonCrudApplicationTests {
 
@@ -40,7 +43,7 @@ class PersonCrudApplicationTests {
 
         String content = result.getResponse().getContentAsString();
         PersonDto created = objectMapper.readValue(content, PersonDto.class);
-        assertThat(created.getId()).isNotNull();
+        assertThat(created.id()).isNotNull();
     }
 
     @Test
@@ -56,7 +59,7 @@ class PersonCrudApplicationTests {
         PersonDto created = objectMapper.readValue(post.getResponse().getContentAsString(), PersonDto.class);
 
         // get
-        mockMvc.perform(MockMvcRequestBuilders.get("/api/persons/{id}", created.getId()))
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/persons/{id}", created.id()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("bob.marley@example.com"));
     }
@@ -72,13 +75,18 @@ class PersonCrudApplicationTests {
 
         PersonDto created = objectMapper.readValue(post.getResponse().getContentAsString(), PersonDto.class);
 
-        // update
-        created.setFirstName("Caroline");
-        created.setEmail("caroline.king@example.com");
+        // update using immutable record
+        PersonDto updated = new PersonDto(
+                created.id(),
+                "Caroline",
+                created.lastName(),
+                "caroline.king@example.com",
+                created.personType()
+        );
 
-        mockMvc.perform(MockMvcRequestBuilders.put("/api/persons/{id}", created.getId())
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/persons/{id}", created.id())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(created)))
+                        .content(objectMapper.writeValueAsString(updated)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.firstName").value("Caroline"))
                 .andExpect(jsonPath("$.email").value("caroline.king@example.com"));
@@ -86,7 +94,6 @@ class PersonCrudApplicationTests {
 
     @Test
     void testFindByLastName() throws Exception {
-        // create two persons
         PersonDto p1 = new PersonDto(null, "David", "Smith", "david.smith@example.com");
         PersonDto p2 = new PersonDto(null, "Eve", "Johnson", "eve.johnson@example.com");
 
@@ -100,7 +107,6 @@ class PersonCrudApplicationTests {
                         .content(objectMapper.writeValueAsString(p2)))
                 .andExpect(status().isCreated());
 
-        // search by last name (case-insensitive)
         mockMvc.perform(MockMvcRequestBuilders.get("/api/persons/search")
                         .param("lastName", "smith"))
                 .andExpect(status().isOk())
@@ -109,7 +115,6 @@ class PersonCrudApplicationTests {
 
     @Test
     void testListPersons() throws Exception {
-        // ensure at least one person exists
         PersonDto dto = new PersonDto(null, "Frank", "Ocean", "frank.ocean@example.com");
         mockMvc.perform(MockMvcRequestBuilders.post("/api/persons")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -133,11 +138,75 @@ class PersonCrudApplicationTests {
 
         PersonDto created = objectMapper.readValue(post.getResponse().getContentAsString(), PersonDto.class);
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/api/persons/{id}", created.getId()))
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/persons/{id}", created.id()))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/api/persons/{id}", created.getId()))
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/persons/{id}", created.id()))
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void testFlexibleConstructorBodiesValidation() {
+        // Validation in Teacher constructor before super()
+        assertThatThrownBy(() -> new Teacher("Ada", "Lovelace", "invalid-email"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Invalid email format for Teacher");
+
+        // Validation in Student constructor before super()
+        assertThatThrownBy(() -> new Student("Alan", "Turing", "invalid-email"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Invalid email format for Student");
+
+        // Sanitization trims and lowercases email before super()
+        Teacher teacher = new Teacher("  Ada  ", "  Lovelace  ", "  ADA@EXAMPLE.COM  ");
+        assertThat(teacher.getFirstName()).isEqualTo("Ada");
+        assertThat(teacher.getEmail()).isEqualTo("ada@example.com");
+
+        // Null email branch & default constructor
+        Teacher teacherNullEmail = new Teacher("Ada", "Lovelace", null);
+        assertThat(teacherNullEmail.getEmail()).isEmpty();
+        assertThat(new Teacher()).isNotNull();
+
+        Student studentNullEmail = new Student("Alan", "Turing", null);
+        assertThat(studentNullEmail.getEmail()).isEmpty();
+        assertThat(new Student()).isNotNull();
+    }
+
+    @Test
+    void testGetPersonNotFound() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/persons/99999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testUpdatePersonNotFound() throws Exception {
+        PersonDto dto = new PersonDto(99999L, "Ghost", "User", "ghost@example.com");
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/persons/99999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testCreateTeacherAndStudentExplicitTypes() throws Exception {
+        PersonDto teacherDto = new PersonDto(null, "Prof", "Oak", "oak@pokemon.edu", "TEACHER");
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/persons")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(teacherDto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.personType").value("TEACHER"));
+
+        PersonDto studentDto = new PersonDto(null, "Ash", "Ketchum", "ash@pokemon.edu", "STUDENT");
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/persons")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(studentDto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.personType").value("STUDENT"));
+    }
+
+    @Test
+    void testApplicationClassInstantiation() {
+        assertThat(new PersonCrudApplication()).isNotNull();
+        PersonCrudApplication.main(new String[]{"--spring.main.web-application-type=none"});
+    }
 }
