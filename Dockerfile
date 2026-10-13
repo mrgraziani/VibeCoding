@@ -4,11 +4,12 @@ WORKDIR /build
 # Install Maven in build image
 RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
 
-# Copy pom and sources
+# Copy pom.xml first and pre-fetch dependencies for efficient Docker layer caching
 COPY pom.xml .
-COPY src ./src
+RUN mvn dependency:go-offline -B || true
 
-# Build the project
+# Copy sources and build the package
+COPY src ./src
 RUN mvn -B -DskipTests package
 
 FROM eclipse-temurin:latest

@@ -237,7 +237,8 @@ try (Arena arena = Arena.ofConfined()) {
 - **Centralized `@RestControllerAdvice`:** Introduced `GlobalExceptionHandler` to handle `IllegalArgumentException` (400), `MethodArgumentNotValidException` (400 with detailed field validation errors), and `DataIntegrityViolationException` (409 Conflict), completely eliminating unhandled 500 errors and stack trace leaks.
 - **N+1 Query Elimination:** In `CourseService`, multiple single-entity lookups were replaced by single batch queries using `personRepository.findAllById(ids)` mapped in memory.
 - **Server-Side Filtering via JPQL:** `PersonRepository` now queries specifically by type (`TYPE(p) = :type`) and case-insensitive prefix (`findByLastNameStartingWithIgnoreCase`), shifting filtering responsibility back to the database.
-- **Production Profile Hardening:** `application-prod.properties` explicitly disables the H2 console (`spring.h2.console.enabled=false`), while Docker sets `SPRING_PROFILES_ACTIVE=prod`.
+- **Production Profile Hardening & Persistent Storage:** Configured PostgreSQL 16 with Flyway migrations (`V1__init_schema.sql`) for robust, persistent storage, while Hibernate validates the schema (`ddl-auto=validate`) instead of ephemeral in-memory persistence.
+- **H2 Console Disabled in Prod:** `application-prod.properties` explicitly disables the H2 console (`spring.h2.console.enabled=false`), while Docker sets `SPRING_PROFILES_ACTIVE=prod`.
 
 ---
 
@@ -254,6 +255,7 @@ try (Arena arena = Arena.ofConfined()) {
 
 ### 4. Container & Infrastructure Fixes
 
+- **PostgreSQL 16 Service with Healthchecks:** Integrated `postgres:16-alpine` into `docker-compose.yml` with automated healthchecks (`pg_isready`), persistent volume mounting (`postgres_data`), and strict startup ordering (`service_healthy`).
 - **Multi-Stage Non-Root Dockerfile:** Updated the Java runtime to OpenJDK 25 and created an unprivileged system user (`USER appuser`).
 - **Docker Build-Arg Scope Fix:** Moved `ARG REACT_APP_API_URL` below the `FROM` declaration in `frontend/Dockerfile`, correctly passing environment variables into the React build bundle.
 - **Reverse Proxy with Security Headers:** Configured `nginx` (`default.conf`) to forward `/api/` traffic to the backend container while injecting security headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`).

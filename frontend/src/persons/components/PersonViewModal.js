@@ -23,25 +23,9 @@ export default function PersonViewModal({
 
     async function loadCourses() {
       try {
-        const res = await apiClient.get('/courses');
+        const res = await apiClient.get(`/persons/${person.id}/courses`);
         if (!isCurrent) return;
-
-        const allCourses = res.data || [];
-        if (person.personType === PERSON_ROLES.TEACHER) {
-          setAssociatedCourses(
-            allCourses.filter(
-              c => c.teacherId === person.id || String(c.teacherId) === String(person.id)
-            )
-          );
-        } else {
-          setAssociatedCourses(
-            allCourses.filter(c =>
-              (c.studentIds || []).some(
-                id => id === person.id || String(id) === String(person.id)
-              )
-            )
-          );
-        }
+        setAssociatedCourses(res.data || []);
       } catch (err) {
         console.warn('Could not load associated courses:', err);
       } finally {

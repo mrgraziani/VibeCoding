@@ -133,10 +133,20 @@ public class CourseService {
             throw new IllegalArgumentException("Cohort size must be greater than zero");
         }
         Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new IllegalArgumentException("Course not found: " + courseId));
+                .orElseThrow(() -> new com.example.personcrud.exception.ResourceNotFoundException("Course not found: " + courseId));
         return course.getStudents().stream()
                 .gather(Gatherers.windowFixed(cohortSize))
                 .toList();
+    }
+
+    public List<Course> findByPersonId(Long personId) {
+        List<Course> asTeacher = courseRepository.findByTeacherId(personId);
+        List<Course> asStudent = courseRepository.findByStudentId(personId);
+        if (asTeacher.isEmpty()) return asStudent;
+        if (asStudent.isEmpty()) return asTeacher;
+        List<Course> combined = new java.util.ArrayList<>(asTeacher);
+        combined.addAll(asStudent);
+        return combined.stream().distinct().toList();
     }
 
     // --- Sequenced Collections (JEP 431) ---

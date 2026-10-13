@@ -23,6 +23,14 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    @ExceptionHandler(com.example.personcrud.exception.ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleResourceNotFound(com.example.personcrud.exception.ResourceNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                "error", ex.getMessage() != null ? ex.getMessage() : "Resource not found",
+                "status", HttpStatus.NOT_FOUND.value()
+        ));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(

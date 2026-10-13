@@ -60,6 +60,11 @@ describe('App Component', () => {
     expect(screen.getByRole('button', { name: 'Courses' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Java 25 Lab/i })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: /Select language/i })).toBeInTheDocument();
+
+    // Await async initial load to prevent act(...) warnings
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Students/i })).toBeInTheDocument();
+    });
   });
 
   test('switches tabs between Students, Teachers, Courses, and Java 25 Lab', async () => {
@@ -94,7 +99,10 @@ describe('App Component', () => {
     localStorage.clear();
     render(<App />);
 
-    expect(screen.getByRole('button', { name: 'Students' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Students' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Students/i })).toBeInTheDocument();
+    });
 
     const select = screen.getByRole('combobox', { name: /Select language/i });
     expect(select.value).toBe('en');

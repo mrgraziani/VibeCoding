@@ -205,7 +205,7 @@ describe('PersonCrud Component', () => {
     fireEvent.click(screen.getByRole('button', { name: /Search/i }));
 
     await waitFor(() => {
-      expect(apiClient.get).toHaveBeenCalledWith('/persons/search?lastName=Turing');
+      expect(apiClient.get).toHaveBeenCalledWith('/persons/search?lastName=Turing&personType=STUDENT');
     });
 
     // Clear search
@@ -241,7 +241,7 @@ describe('PersonCrud Component', () => {
     fireEvent.click(screen.getByRole('button', { name: /Search/i }));
 
     await waitFor(() => {
-      expect(apiClient.get).toHaveBeenCalledWith('/persons/search?lastName=Love');
+      expect(apiClient.get).toHaveBeenCalledWith('/persons/search?lastName=Love&personType=TEACHER');
       expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
       expect(screen.queryByText('Sam Lovering')).not.toBeInTheDocument();
     });

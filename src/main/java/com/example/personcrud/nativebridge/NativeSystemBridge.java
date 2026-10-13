@@ -16,24 +16,36 @@ import java.util.Map;
 public class NativeSystemBridge {
 
     private final Linker linker = Linker.nativeLinker();
+    private final MethodHandle cachedGetpidHandle;
+
+    public NativeSystemBridge() {
+        MethodHandle handle = null;
+        try {
+            SymbolLookup stdlib = linker.defaultLookup();
+            MemorySegment getpidAddress = stdlib.find("getpid").orElse(null);
+            if (getpidAddress != null) {
+                FunctionDescriptor descriptor = FunctionDescriptor.of(ValueLayout.JAVA_INT);
+                handle = linker.downcallHandle(getpidAddress, descriptor);
+            }
+        } catch (Throwable _) {
+            handle = null;
+        }
+        this.cachedGetpidHandle = handle;
+    }
 
     /**
      * Foreign Function invocation: downcall to native libc getpid() function.
+     * Uses cached MethodHandle for maximum performance.
      */
     public long getNativeProcessId() {
-        try {
-            SymbolLookup stdlib = linker.defaultLookup();
-            MemorySegment getpidAddress = stdlib.find("getpid")
-                    .orElseThrow(() -> new UnsupportedOperationException("getpid not found in standard lookup"));
-
-            FunctionDescriptor descriptor = FunctionDescriptor.of(ValueLayout.JAVA_INT);
-            MethodHandle getpidHandle = linker.downcallHandle(getpidAddress, descriptor);
-            int pid = (int) getpidHandle.invokeExact();
-            return pid;
-        } catch (Throwable _) {
-            // Fallback using Java ProcessHandle if native lookup fails
-            return ProcessHandle.current().pid();
+        if (cachedGetpidHandle != null) {
+            try {
+                return (int) cachedGetpidHandle.invokeExact();
+            } catch (Throwable _) {
+                // Fallback
+            }
         }
+        return ProcessHandle.current().pid();
     }
 
     /**

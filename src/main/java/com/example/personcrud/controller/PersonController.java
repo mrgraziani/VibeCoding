@@ -17,9 +17,11 @@ import java.util.List;
 public class PersonController {
 
     private final PersonService service;
+    private final com.example.personcrud.service.CourseService courseService;
 
-    public PersonController(PersonService service) {
+    public PersonController(PersonService service, com.example.personcrud.service.CourseService courseService) {
         this.service = service;
+        this.courseService = courseService;
     }
 
     private PersonDto toDto(Person p) {
@@ -80,6 +82,18 @@ public class PersonController {
                 .map(this::toDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/courses")
+    public List<com.example.personcrud.dto.CourseDto> getCourses(@PathVariable Long id) {
+        return courseService.findByPersonId(id).stream()
+                .map(c -> new com.example.personcrud.dto.CourseDto(
+                        c.getId(),
+                        c.getName(),
+                        c.getTeacher() != null ? c.getTeacher().getId() : null,
+                        c.getStudents().stream().map(Student::getId).toList()
+                ))
+                .toList();
     }
 
     @DeleteMapping("/{id}")

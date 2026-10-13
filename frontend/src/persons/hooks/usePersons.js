@@ -26,8 +26,11 @@ export function usePersons(filterType) {
 
     try {
       let res;
-      if (query.trim()) {
-        res = await apiClient.get(`/persons/search?lastName=${encodeURIComponent(query.trim())}`);
+      if (query && query.trim()) {
+        const url = filterType
+          ? `/persons/search?lastName=${encodeURIComponent(query.trim())}&personType=${encodeURIComponent(filterType)}`
+          : `/persons/search?lastName=${encodeURIComponent(query.trim())}`;
+        res = await apiClient.get(url);
       } else {
         res = await apiClient.get('/persons');
       }

@@ -297,6 +297,22 @@ class PersonCrudApplicationTests {
     }
 
     @Test
+    void testGetCoursesForPerson() throws Exception {
+        PersonDto teacherDto = new PersonDto(null, "Prof", "Sprout", "sprout@hogwarts.edu", "TEACHER");
+        MvcResult res = mockMvc.perform(MockMvcRequestBuilders.post("/api/persons")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(teacherDto)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        PersonDto createdTeacher = objectMapper.readValue(res.getResponse().getContentAsString(), PersonDto.class);
+
+        // Fetch courses for teacher (initially empty)
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/persons/{id}/courses", createdTeacher.id()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
     void testApplicationClassInstantiation() {
         assertThat(new PersonCrudApplication()).isNotNull();
         PersonCrudApplication.main(new String[]{"--spring.main.web-application-type=none"});
