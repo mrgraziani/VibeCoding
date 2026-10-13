@@ -8,6 +8,7 @@ export default function CourseViewModal({
   course,
   personById,
   onEditClick,
+  canEdit = true,
 }) {
   const { t } = useI18n();
   const [firstStudent, setFirstStudent] = useState(null);
@@ -218,13 +219,15 @@ export default function CourseViewModal({
           <button type="button" className="btn-modern-secondary" onClick={onClose}>
             {t('common.close')}
           </button>
-          <button
-            type="button"
-            className="btn-modern-primary"
-            onClick={() => onEditClick(course)}
-          >
-            {t('courses.editBtn')}
-          </button>
+          {canEdit && (
+            <button
+              type="button"
+              className="btn-modern-primary"
+              onClick={() => onEditClick(course)}
+            >
+              {t('courses.editBtn')}
+            </button>
+          )}
         </div>
       </div>
     </div>

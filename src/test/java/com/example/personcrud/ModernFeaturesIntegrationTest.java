@@ -27,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(classes = PersonCrudApplication.class)
 @AutoConfigureMockMvc
+@org.springframework.security.test.context.support.WithMockUser(roles = "ADMIN")
 class ModernFeaturesIntegrationTest {
 
     @Autowired
@@ -138,6 +139,13 @@ class ModernFeaturesIntegrationTest {
         mockMvc.perform(MockMvcRequestBuilders.post("/api/system/virtual-threads/run"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(4));
+
+        // GET /api/system/actuator-summary
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/system/actuator-summary"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"))
+                .andExpect(jsonPath("$.jvmMemory.usedMb").isNumber())
+                .andExpect(jsonPath("$.virtualThreadsEnabled").value(true));
     }
 
     @Test

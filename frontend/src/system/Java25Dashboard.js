@@ -7,6 +7,10 @@ export default function Java25Dashboard() {
   const { t } = useI18n();
   const { addToast } = useToast();
 
+  // Actuator SRE Telemetry state
+  const [actuatorSummary, setActuatorSummary] = useState(null);
+  const [loadingActuator, setLoadingActuator] = useState(false);
+
   // Diagnostics state
   const [nativeInfo, setNativeInfo] = useState(null);
   const [payloadText, setPayloadText] = useState('Modern Java 25 Native FFM API Payload');
@@ -25,9 +29,22 @@ export default function Java25Dashboard() {
   const [loadingAudit, setLoadingAudit] = useState(false);
 
   useEffect(() => {
+    fetchActuatorSummary();
     fetchNativeInfo();
     fetchAuditLog();
   }, []);
+
+  async function fetchActuatorSummary() {
+    setLoadingActuator(true);
+    try {
+      const res = await apiClient.get('/system/actuator-summary');
+      setActuatorSummary(res.data);
+    } catch (err) {
+      console.warn('Actuator summary fetch error:', err);
+    } finally {
+      setLoadingActuator(false);
+    }
+  }
 
   async function fetchNativeInfo() {
     setLoadingNative(true);
@@ -132,11 +149,88 @@ export default function Java25Dashboard() {
           </div>
 
           <div className="d-flex gap-2">
-            <button className="btn-modern-secondary" onClick={() => { fetchNativeInfo(); fetchAuditLog(); }}>
+            <button className="btn-modern-secondary" onClick={() => { fetchActuatorSummary(); fetchNativeInfo(); fetchAuditLog(); }}>
               {t('dashboard.refreshAll')}
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Row 0: Spring Boot Actuator Cloud-Native Telemetry */}
+      <div className="glass-card mb-4">
+        <div className="glass-card-header">
+          <h4 className="glass-card-title d-flex align-items-center gap-2">
+            <span>🛡️ Actuator SRE Telemetry & Observability</span>
+            <span className="brand-pill" style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', borderColor: 'rgba(16, 185, 129, 0.4)' }}>Production Probes</span>
+          </h4>
+          <div className="d-flex gap-2">
+            <button className="btn-modern-cyan" onClick={fetchActuatorSummary} disabled={loadingActuator}>
+              {loadingActuator ? 'Actualizando...' : 'Refrescar SRE'}
+            </button>
+            <a href="/actuator/health" target="_blank" rel="noreferrer" className="btn-modern-secondary text-decoration-none">
+              Raw /actuator/health ↗
+            </a>
+          </div>
+        </div>
+
+        {actuatorSummary ? (
+          <div className="row g-3">
+            {/* Health & DB status */}
+            <div className="col-md-3 col-sm-6">
+              <div className="metric-card">
+                <div className="metric-label">Health & Database</div>
+                <div className="metric-value d-flex align-items-center gap-2" style={{ color: '#10b981' }}>
+                  <span className="status-dot" style={{ background: '#10b981' }}></span>
+                  <span>{actuatorSummary.status}</span>
+                </div>
+                <div className="metric-sub">
+                  PostgreSQL 16 ({actuatorSummary.databaseStatus || 'Connected'})
+                </div>
+              </div>
+            </div>
+
+            {/* JVM Heap Memory */}
+            <div className="col-md-3 col-sm-6">
+              <div className="metric-card">
+                <div className="metric-label">JVM Heap Memory</div>
+                <div className="metric-value" style={{ color: '#06b6d4' }}>
+                  {actuatorSummary.jvmMemory?.usedMb} MB / {actuatorSummary.jvmMemory?.maxMb} MB
+                </div>
+                <div className="metric-sub">
+                  {actuatorSummary.jvmMemory?.usagePercentage}% asignado ({actuatorSummary.jvmMemory?.totalMb} MB reservado)
+                </div>
+              </div>
+            </div>
+
+            {/* Threads & Loom Concurrency */}
+            <div className="col-md-3 col-sm-6">
+              <div className="metric-card">
+                <div className="metric-label">Concurrencia & Loom</div>
+                <div className="metric-value" style={{ color: '#a5b4fc' }}>
+                  {actuatorSummary.liveThreads} Hilos Vivos
+                </div>
+                <div className="metric-sub" style={{ color: '#34d399' }}>
+                  ✓ Virtual Threads Activo (Tomcat)
+                </div>
+              </div>
+            </div>
+
+            {/* Process Uptime & CPU Cores */}
+            <div className="col-md-3 col-sm-6">
+              <div className="metric-card">
+                <div className="metric-label">Uptime & Arquitectura</div>
+                <div className="metric-value" style={{ color: '#fbbf24' }}>
+                  {actuatorSummary.uptimeFormatted}
+                </div>
+                <div className="metric-sub">
+                  {actuatorSummary.cpuCores} CPU Cores ({nativeInfo?.osArch || 'arm64/amd64'})
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-3 text-muted">Cargando telemetría de Actuator...</div>
+        )}
       </div>
 
       {/* Row 1: FFM API / Native Bridge */}

@@ -124,4 +124,12 @@ public class CourseController {
     public List<String> getAuditLog() {
         return service.getAuditLogDescriptions();
     }
+
+    /**
+     * Exposes persistent audit log entries with timestamp, eventType, and structured payload.
+     */
+    @GetMapping("/audit-log/detailed")
+    public List<com.example.personcrud.model.AcademicAuditLogEntry> getDetailedAuditLog() {
+        return service.getDetailedAuditLog();
+    }
 }

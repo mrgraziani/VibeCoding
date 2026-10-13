@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { apiClient, extractErrorMessage } from '../api';
 import { useToast } from '../ToastContext';
 import { useI18n } from '../i18n/I18nContext';
+import { useAuth } from '../auth/AuthContext';
 import { usePersons } from './hooks/usePersons';
 import PersonFormModal from './components/PersonFormModal';
 import PersonViewModal from './components/PersonViewModal';
@@ -10,6 +11,7 @@ import { PERSON_ROLES, DEFAULT_ROLE } from './constants';
 export default function PersonCrud({ filterType }) {
   const { t } = useI18n();
   const { addToast } = useToast();
+  const { canCreate, canEdit, canDelete, canViewDetails } = useAuth();
 
   // Custom hook encapsulating fetching, filtering, and race-condition safety
   const {
@@ -131,15 +133,17 @@ export default function PersonCrud({ filterType }) {
             )}
           </form>
 
-          {/* New Person Button */}
-          <button
-            type="button"
-            className="btn-modern-primary"
-            onClick={openCreateModal}
-            id="btn-open-create-person"
-          >
-            {t('persons.newBtn', { role: roleLabel })}
-          </button>
+          {/* New Person Button (Only for Teacher & Admin) */}
+          {canCreate && (
+            <button
+              type="button"
+              className="btn-modern-primary"
+              onClick={openCreateModal}
+              id="btn-open-create-person"
+            >
+              {t('persons.newBtn', { role: roleLabel })}
+            </button>
+          )}
         </div>
       </div>
 
@@ -175,29 +179,36 @@ export default function PersonCrud({ filterType }) {
                 </div>
               </div>
 
+              {/* Action buttons conditionally rendered by RBAC role */}
               <div className="d-flex gap-2">
-                <button
-                  className="btn-modern-cyan"
-                  style={{ padding: '0.45rem 0.85rem', fontSize: '0.85rem' }}
-                  onClick={() => openViewModal(p)}
-                  aria-label={`${t('persons.viewBtn')} ${p.firstName}`}
-                >
-                  {t('persons.viewBtn')}
-                </button>
-                <button
-                  className="btn-modern-outline"
-                  onClick={() => openEditModal(p)}
-                  aria-label={`${t('common.edit')} ${p.firstName}`}
-                >
-                  {t('common.edit')}
-                </button>
-                <button
-                  className="btn-modern-danger"
-                  onClick={() => removePerson(p)}
-                  aria-label={`${t('common.delete')} ${p.firstName}`}
-                >
-                  {t('common.delete')}
-                </button>
+                {canViewDetails && (
+                  <button
+                    className="btn-modern-cyan"
+                    style={{ padding: '0.45rem 0.85rem', fontSize: '0.85rem' }}
+                    onClick={() => openViewModal(p)}
+                    aria-label={`${t('persons.viewBtn')} ${p.firstName}`}
+                  >
+                    {t('persons.viewBtn')}
+                  </button>
+                )}
+                {canEdit && (
+                  <button
+                    className="btn-modern-outline"
+                    onClick={() => openEditModal(p)}
+                    aria-label={`${t('common.edit')} ${p.firstName}`}
+                  >
+                    {t('common.edit')}
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    className="btn-modern-danger"
+                    onClick={() => removePerson(p)}
+                    aria-label={`${t('common.delete')} ${p.firstName}`}
+                  >
+                    {t('common.delete')}
+                  </button>
+                )}
               </div>
             </div>
           ))
@@ -211,6 +222,7 @@ export default function PersonCrud({ filterType }) {
         person={viewPerson}
         formatRole={formatRole}
         onEditClick={openEditModal}
+        canEdit={canEdit}
       />
 
       {/* Form Modal (Create / Edit) */}

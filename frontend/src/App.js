@@ -5,6 +5,8 @@ import Java25Dashboard from './system/Java25Dashboard';
 import { ToastProvider } from './ToastContext';
 import { I18nProvider, useI18n } from './i18n/I18nContext';
 import LanguageSelector from './i18n/LanguageSelector';
+import { AuthProvider, useAuth } from './auth/AuthContext';
+import RoleSwitcher from './auth/RoleSwitcher';
 import { apiClient } from './api';
 
 function Teachers() {
@@ -17,8 +19,16 @@ function Students() {
 
 function MainApp() {
   const { t } = useI18n();
+  const { canAccessLab } = useAuth();
   const [page, setPage] = useState('students');
   const [backendOnline, setBackendOnline] = useState(null);
+
+  // Automatically redirect away from Java 25 Lab if active role is not ADMIN
+  useEffect(() => {
+    if (page === 'java25' && !canAccessLab) {
+      setPage('students');
+    }
+  }, [page, canAccessLab]);
 
   useEffect(() => {
     checkHealth();
@@ -70,22 +80,26 @@ function MainApp() {
             >
               {t('nav.courses')}
             </button>
-            <button
-              className={`nav-tab-btn ${page === 'java25' ? 'active' : ''}`}
-              onClick={() => setPage('java25')}
-              id="tab-java25"
-            >
-              <span style={{ color: '#06b6d4', fontWeight: 'bold' }}>⚡</span> {t('nav.java25')}
-            </button>
+            {canAccessLab && (
+              <button
+                className={`nav-tab-btn ${page === 'java25' ? 'active' : ''}`}
+                onClick={() => setPage('java25')}
+                id="tab-java25"
+                title="Laboratorio de diagnósticos (Solo Administrador)"
+              >
+                <span style={{ color: '#06b6d4', fontWeight: 'bold' }}>⚡</span> {t('nav.java25')}
+              </button>
+            )}
           </nav>
 
-          {/* Right Section: Language Selector combo & Backend Status */}
-          <div className="d-flex align-items-center gap-3">
+          {/* Right Section: Role Switcher, Language Selector & Backend Status */}
+          <div className="d-flex align-items-center gap-2 flex-wrap">
+            <RoleSwitcher />
             <LanguageSelector />
 
             <div>
               {backendOnline === true && (
-                <span className="status-indicator online" title="Backend Java 25 conectado">
+                <span className="status-indicator online" title="Backend Java 25 conectado y saludable">
                   <span className="status-dot"></span>
                   <span>{t('status.online')}</span>
                 </span>
@@ -121,7 +135,9 @@ export default function App() {
   return (
     <I18nProvider>
       <ToastProvider>
-        <MainApp />
+        <AuthProvider>
+          <MainApp />
+        </AuthProvider>
       </ToastProvider>
     </I18nProvider>
   );

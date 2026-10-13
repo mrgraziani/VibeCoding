@@ -368,6 +368,31 @@ What separates an amateur "Vibe Coder" from a **Senior Engineer leveraging AI as
 
 ---
 
+# Act V: The Staff Leap — Operational Governance & Production Hardening
+
+In Phase 3, the codebase ascends from Senior implementation craft to **Staff/CTO Operational Governance**, closing the gap between a clean local project and enterprise cloud-native software without sacrificing zero-friction local evaluation:
+
+### 1. Cloud-Native Observability (Spring Boot Actuator)
+- **Dedicated SRE Probes:** Eliminated heavy business queries in container healthchecks. [docker-compose.yml](file:///Users/matiasgraziani/Desarrollo/Java-test/docker-compose.yml) now targets `/actuator/health`, providing non-intrusive container orchestrator readiness and liveness verification.
+- **Metrics & OpenTelemetry Readiness:** Exposes `/actuator/metrics` and `/actuator/health` seamlessly through the reverse proxy on port 3000.
+
+### 2. Distributed Event Persistence (PostgreSQL Flyway V2)
+- **Survives Container Restarts:** Migrated domain audit logs from volatile in-memory queues (`ConcurrentLinkedDeque`) to PostgreSQL via `academic_audit_log` ([V2__create_academic_audit_log.sql](file:///Users/matiasgraziani/Desarrollo/Java-test/src/main/resources/db/migration/V2__create_academic_audit_log.sql)).
+- **Dual-Dialect ANSI SQL:** Table definitions and indexes are 100% ANSI compatible, allowing `mvn test` to execute with lightning speed against in-memory H2 while production Docker persists every record in PostgreSQL 16.
+
+### 3. Frictionless Role-Based Access Control (RBAC) & UI Switcher
+- **Security Without Onboarding Friction:** Integrated Spring Security with stateless HTTP Basic Auth and pre-seeded demo personas:
+  - 🔴 **Admin (`admin:admin123`):** Full CRUD on all entities + privileged execution of the Java 25 Diagnostic Lab.
+  - 🔵 **Teacher (`teacher:teacher123`):** Full academic management of courses, teachers, and student enrollments.
+  - 🟢 **Student (`student:student123`):** Read-only visibility across courses; write mutations strictly blocked (HTTP 403 Forbidden).
+  - ⚪ **Anonymous (Public):** Free inspection of public catalog; write operations require credentials (HTTP 401 Unauthorized).
+- **Interactive UI Role Switcher:** The top navigation bar includes an interactive role selector that immediately switches credentials across all Axios requests via an automated request interceptor.
+
+### 4. Architectural Decision Records (ADR)
+- **Java 25 & ASM Patch Governance:** Formally documented in [ADR-001: Experimental Java 25 Runtime & Spring ASM Bytecode Compatibility Patch](file:///Users/matiasgraziani/Desarrollo/Java-test/docs/adr/ADR-001-java-25-runtime-and-asm-bytecode-patch.md), explaining why the bytecode bridge exists, why bleeding-edge APIs are quarantined in `/api/system`, and the exact deprecation criteria for enterprise production.
+
+---
+
 ## Testing & Verification
 
 The suite exercises full HTTP lifecycles, database constraints, pattern matching validation, and concurrency performance:

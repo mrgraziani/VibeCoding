@@ -174,8 +174,10 @@ public class CourseService {
     }
 
     public List<String> getAuditLogDescriptions() {
-        return auditService.getAuditLog().stream()
-                .map(auditService::describeEvent)
-                .toList();
+        return auditService.getAuditLogDescriptions();
+    }
+
+    public List<com.example.personcrud.model.AcademicAuditLogEntry> getDetailedAuditLog() {
+        return auditService.getAuditLog();
     }
 }

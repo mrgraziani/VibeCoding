@@ -4,32 +4,44 @@ import com.example.personcrud.event.AcademicEvent;
 import com.example.personcrud.event.AcademicEvent.CourseCreatedEvent;
 import com.example.personcrud.event.AcademicEvent.StudentEnrolledEvent;
 import com.example.personcrud.event.AcademicEvent.TeacherAssignedEvent;
+import com.example.personcrud.model.AcademicAuditLogEntry;
+import com.example.personcrud.repository.AcademicAuditLogRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Deque;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class AcademicAuditService {
 
-    private static final int MAX_AUDIT_LOG_SIZE = 1000;
-    private final Deque<AcademicEvent> auditLog = new ConcurrentLinkedDeque<>();
-    private final AtomicInteger currentSize = new AtomicInteger(0);
+    private final AcademicAuditLogRepository auditRepository;
 
-    public void recordEvent(AcademicEvent event) {
-        if (event == null) return;
-        auditLog.addLast(event);
-        if (currentSize.incrementAndGet() > MAX_AUDIT_LOG_SIZE) {
-            if (auditLog.pollFirst() != null) {
-                currentSize.decrementAndGet();
-            }
-        }
+    public AcademicAuditService(AcademicAuditLogRepository auditRepository) {
+        this.auditRepository = auditRepository;
     }
 
-    public List<AcademicEvent> getAuditLog() {
-        return List.copyOf(auditLog);
+    @Transactional
+    public void recordEvent(AcademicEvent event) {
+        if (event == null) return;
+        String desc = describeEvent(event);
+        String eventType = event.getClass().getSimpleName();
+        AcademicAuditLogEntry entry = new AcademicAuditLogEntry(
+                event.courseId(),
+                eventType,
+                desc,
+                event.toString()
+        );
+        auditRepository.save(entry);
+    }
+
+    public List<AcademicAuditLogEntry> getAuditLog() {
+        return auditRepository.findTop50ByOrderByCreatedAtDesc();
+    }
+
+    public List<String> getAuditLogDescriptions() {
+        return auditRepository.findTop50ByOrderByCreatedAtDesc().stream()
+                .map(AcademicAuditLogEntry::getDescription)
+                .toList();
     }
 
     /**

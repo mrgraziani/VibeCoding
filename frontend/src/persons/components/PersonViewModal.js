@@ -9,6 +9,7 @@ export default function PersonViewModal({
   person,
   formatRole,
   onEditClick,
+  canEdit = true,
 }) {
   const { t } = useI18n();
   const [associatedCourses, setAssociatedCourses] = useState([]);
@@ -169,13 +170,15 @@ export default function PersonViewModal({
           <button type="button" className="btn-modern-secondary" onClick={onClose}>
             {t('common.close')}
           </button>
-          <button
-            type="button"
-            className="btn-modern-primary"
-            onClick={() => onEditClick(person)}
-          >
-            {t('common.edit')}
-          </button>
+          {canEdit && (
+            <button
+              type="button"
+              className="btn-modern-primary"
+              onClick={() => onEditClick(person)}
+            >
+              {t('common.edit')}
+            </button>
+          )}
         </div>
       </div>
     </div>

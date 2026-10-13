@@ -14,6 +14,31 @@ export const apiClient = axios.create({
   timeout: 10000,
 });
 
+// Automatic RBAC header injection based on active role in localStorage
+apiClient.interceptors.request.use((config) => {
+  try {
+    const roleKey = (typeof window !== 'undefined' && localStorage.getItem('academic_current_role')) || 'ADMIN';
+    const credentials = {
+      ADMIN: 'admin:admin123',
+      TEACHER: 'teacher:teacher123',
+      STUDENT: 'student:student123',
+    }[roleKey];
+
+    if (credentials) {
+      const token = typeof btoa === 'function'
+        ? btoa(credentials)
+        : (typeof Buffer !== 'undefined' ? Buffer.from(credentials).toString('base64') : null);
+      if (token) {
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Basic ${token}`;
+      }
+    } else if (config.headers) {
+      delete config.headers.Authorization;
+    }
+  } catch (_) {}
+  return config;
+});
+
 /**
  * Parses and extracts human-readable error messages from Spring Boot backend responses.
  * Avoids "[object Object]" artifacts from Spring's JSON error objects.

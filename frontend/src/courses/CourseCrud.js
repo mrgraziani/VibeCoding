@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { apiClient, extractErrorMessage } from '../api';
 import { useToast } from '../ToastContext';
 import { useI18n } from '../i18n/I18nContext';
+import { useAuth } from '../auth/AuthContext';
 import { useCourses } from './hooks/useCourses';
 import CourseFormModal from './components/CourseFormModal';
 import CourseViewModal from './components/CourseViewModal';
@@ -9,6 +10,7 @@ import CourseViewModal from './components/CourseViewModal';
 export default function CourseCrud() {
   const { t } = useI18n();
   const { addToast } = useToast();
+  const { canCreate, canEdit, canDelete, canViewDetails } = useAuth();
 
   const {
     courses,
@@ -64,15 +66,17 @@ export default function CourseCrud() {
           <span>{t('courses.title')}</span>
           <span className="badge-glow-indigo">{t('courses.activeCourses', { count: courses.length })}</span>
         </h2>
-        <div>
-          <button
-            className="btn-modern-primary"
-            onClick={openCreateModal}
-            id="btn-open-create-course"
-          >
-            {t('courses.newBtn')}
-          </button>
-        </div>
+        {canCreate && (
+          <div>
+            <button
+              className="btn-modern-primary"
+              onClick={openCreateModal}
+              id="btn-open-create-course"
+            >
+              {t('courses.newBtn')}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Courses List */}
@@ -112,29 +116,36 @@ export default function CourseCrud() {
                   </div>
                 </div>
 
+                {/* Action buttons conditionally rendered by RBAC role */}
                 <div className="d-flex gap-2">
-                  <button
-                    className="btn-modern-cyan"
-                    style={{ padding: '0.45rem 0.9rem', fontSize: '0.85rem' }}
-                    onClick={() => openViewModal(c)}
-                    aria-label={`${t('courses.viewBtn')} ${c.name}`}
-                  >
-                    {t('courses.viewBtn')}
-                  </button>
-                  <button
-                    className="btn-modern-outline"
-                    onClick={() => openEditModal(c)}
-                    aria-label={`${t('courses.editBtn')} ${c.name}`}
-                  >
-                    {t('courses.editBtn')}
-                  </button>
-                  <button
-                    className="btn-modern-danger"
-                    onClick={() => removeCourse(c)}
-                    aria-label={`${t('common.delete')} ${c.name}`}
-                  >
-                    {t('common.delete')}
-                  </button>
+                  {canViewDetails && (
+                    <button
+                      className="btn-modern-cyan"
+                      style={{ padding: '0.45rem 0.9rem', fontSize: '0.85rem' }}
+                      onClick={() => openViewModal(c)}
+                      aria-label={`${t('courses.viewBtn')} ${c.name}`}
+                    >
+                      {t('courses.viewBtn')}
+                    </button>
+                  )}
+                  {canEdit && (
+                    <button
+                      className="btn-modern-outline"
+                      onClick={() => openEditModal(c)}
+                      aria-label={`${t('courses.editBtn')} ${c.name}`}
+                    >
+                      {t('courses.editBtn')}
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      className="btn-modern-danger"
+                      onClick={() => removeCourse(c)}
+                      aria-label={`${t('common.delete')} ${c.name}`}
+                    >
+                      {t('common.delete')}
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -149,6 +160,7 @@ export default function CourseCrud() {
         course={viewCourse}
         personById={personById}
         onEditClick={openEditModal}
+        canEdit={canEdit}
       />
 
       {/* Form Modal (Create or Edit) */}
