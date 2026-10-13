@@ -10,14 +10,18 @@ import com.example.personcrud.model.Teacher;
 import com.example.personcrud.repository.CourseRepository;
 import com.example.personcrud.repository.PersonRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.SequencedCollection;
+import java.util.stream.Collectors;
 import java.util.stream.Gatherers;
 
 @Service
+@Transactional(readOnly = true)
 public class CourseService {
 
     private final CourseRepository courseRepository;
@@ -40,6 +44,7 @@ public class CourseService {
         return courseRepository.findById(id);
     }
 
+    @Transactional
     public Course create(Course course) {
         course.setId(null);
         resolveTeacherAndStudents(course);
@@ -59,6 +64,7 @@ public class CourseService {
         return saved;
     }
 
+    @Transactional
     public Optional<Course> update(Long id, Course course) {
         return courseRepository.findById(id).map(existing -> {
             existing.setName(course.getName());
@@ -72,36 +78,48 @@ public class CourseService {
         });
     }
 
+    @Transactional
     public void delete(Long id) {
         courseRepository.deleteById(id);
     }
 
     /**
-     * Resolves entities using Pattern Matching for switch and Unnamed Patterns (_),
-     * avoiding dangerous unchecked downcasts.
+     * Resolves entities using single batch queries, eliminating the N+1 SELECT problem,
+     * while preserving order and strictly validating person subtypes using Pattern Matching.
      */
     private void resolveTeacherAndStudents(Course course) {
         if (course.getTeacher() != null && course.getTeacher().getId() != null) {
-            personRepository.findById(course.getTeacher().getId()).ifPresent(p -> {
-                switch (p) {
-                    case Teacher t -> course.setTeacher(t);
-                    case Student _ -> throw new IllegalArgumentException("A student cannot be assigned as teacher");
-                    case Person _ -> throw new IllegalArgumentException("Target person must be a Teacher");
-                }
-            });
+            Person p = personRepository.findById(course.getTeacher().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Teacher with ID " + course.getTeacher().getId() + " not found"));
+            switch (p) {
+                case Teacher t -> course.setTeacher(t);
+                case Student _ -> throw new IllegalArgumentException("Cannot assign student as teacher");
+                case Person _ -> throw new IllegalArgumentException("Unknown person type");
+            }
         }
 
         if (course.getStudents() != null) {
-            List<Student> managed = course.getStudents().stream()
-                    .map(s -> personRepository.findById(s.getId())
-                            .map(p -> switch (p) {
-                                case Student st -> st;
-                                case Person _ -> null;
-                            })
-                            .orElse(null))
+            List<Long> ids = course.getStudents().stream()
+                    .map(Student::getId)
                     .filter(Objects::nonNull)
                     .toList();
-            course.setStudents(managed);
+
+            if (!ids.isEmpty()) {
+                // Batch query IN (...) eliminating N+1 loop queries
+                List<Person> found = personRepository.findAllById(ids);
+                Map<Long, Student> studentMap = found.stream()
+                        .filter(Student.class::isInstance)
+                        .map(Student.class::cast)
+                        .collect(Collectors.toMap(Student::getId, s -> s));
+
+                List<Student> managed = ids.stream()
+                        .map(studentMap::get)
+                        .filter(Objects::nonNull)
+                        .toList();
+                course.setStudents(managed);
+            } else {
+                course.setStudents(List.of());
+            }
         }
     }
 
@@ -111,6 +129,9 @@ public class CourseService {
      * Uses Stream Gatherers (Gatherers.windowFixed) to partition course students into cohort batches.
      */
     public List<List<Student>> getStudentCohorts(Long courseId, int cohortSize) {
+        if (cohortSize <= 0) {
+            throw new IllegalArgumentException("Cohort size must be greater than zero");
+        }
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new IllegalArgumentException("Course not found: " + courseId));
         return course.getStudents().stream()
@@ -132,5 +153,11 @@ public class CourseService {
         return courseRepository.findById(courseId)
                 .map(Course::getStudentsReversed)
                 .orElse(List.of());
+    }
+
+    public List<String> getAuditLogDescriptions() {
+        return auditService.getAuditLog().stream()
+                .map(auditService::describeEvent)
+                .toList();
     }
 }

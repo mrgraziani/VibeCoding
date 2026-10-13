@@ -149,5 +149,27 @@ class ModernFeaturesIntegrationTest {
         assertThatThrownBy(() -> courseService.getStudentCohorts(99999L, 2))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Course not found");
+
+        assertThatThrownBy(() -> courseService.getStudentCohorts(99999L, 0))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Cohort size must be greater than zero");
+    }
+
+    @Test
+    void testConcurrentAuditLoggingThreadSafety() throws Exception {
+        int threadCount = 50;
+        try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            java.util.List<java.util.concurrent.Future<?>> futures = new java.util.ArrayList<>();
+            for (int i = 0; i < threadCount; i++) {
+                final long id = i;
+                futures.add(executor.submit(() -> {
+                    auditService.recordEvent(new CourseCreatedEvent(id, "Course" + id, id));
+                }));
+            }
+            for (var f : futures) {
+                f.get();
+            }
+        }
+        assertThat(auditService.getAuditLog()).isNotEmpty();
     }
 }

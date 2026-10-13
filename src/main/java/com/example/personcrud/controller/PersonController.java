@@ -55,11 +55,9 @@ public class PersonController {
     public List<PersonDto> findByLastName(
             @RequestParam(required = false, defaultValue = "") String lastName,
             @RequestParam(required = false) String personType) {
-        var stream = service.findByLastName(lastName).stream().map(this::toDto);
-        if (personType != null && !personType.isBlank()) {
-            stream = stream.filter(p -> personType.equalsIgnoreCase(p.personType()));
-        }
-        return stream.toList();
+        return service.findByLastNameAndType(lastName, personType).stream()
+                .map(this::toDto)
+                .toList();
     }
 
     @GetMapping("/{id}")

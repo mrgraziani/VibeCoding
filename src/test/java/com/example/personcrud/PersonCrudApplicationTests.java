@@ -263,6 +263,40 @@ class PersonCrudApplicationTests {
     }
 
     @Test
+    void testCannotChangePersonTypeOnUpdate() throws Exception {
+        PersonDto studentDto = new PersonDto(null, "Gary", "Oak", "gary@pokemon.edu", "STUDENT");
+        MvcResult res = mockMvc.perform(MockMvcRequestBuilders.post("/api/persons")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(studentDto)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        PersonDto created = objectMapper.readValue(res.getResponse().getContentAsString(), PersonDto.class);
+
+        // Attempt to illegally change STUDENT to TEACHER
+        PersonDto illegalUpdate = new PersonDto(created.id(), "Gary", "Oak", "gary@pokemon.edu", "TEACHER");
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/persons/{id}", created.id())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(illegalUpdate)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Cannot change person type of an existing person"));
+    }
+
+    @Test
+    void testValidationErrorsHandledGracefully() throws Exception {
+        // Missing firstName, lastName, and invalid email
+        PersonDto invalidDto = new PersonDto(null, "", "", "not-an-email", "STUDENT");
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/persons")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidDto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("Validation failed")))
+                .andExpect(jsonPath("$.details").isMap());
+    }
+
+    @Test
     void testApplicationClassInstantiation() {
         assertThat(new PersonCrudApplication()).isNotNull();
         PersonCrudApplication.main(new String[]{"--spring.main.web-application-type=none"});

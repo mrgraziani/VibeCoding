@@ -3,34 +3,24 @@ package com.example.personcrud.controller;
 import com.example.personcrud.dto.CourseDto;
 import com.example.personcrud.dto.PersonDto;
 import com.example.personcrud.model.Course;
-import com.example.personcrud.model.Person;
 import com.example.personcrud.model.Student;
 import com.example.personcrud.model.Teacher;
-import com.example.personcrud.service.AcademicAuditService;
 import com.example.personcrud.service.CourseService;
-import com.example.personcrud.repository.PersonRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/courses")
 public class CourseController {
 
     private final CourseService service;
-    private final PersonRepository personRepository;
-    private final AcademicAuditService auditService;
 
-    public CourseController(CourseService service,
-                            PersonRepository personRepository,
-                            AcademicAuditService auditService) {
+    public CourseController(CourseService service) {
         this.service = service;
-        this.personRepository = personRepository;
-        this.auditService = auditService;
     }
 
     private CourseDto toDto(Course c) {
@@ -45,25 +35,17 @@ public class CourseController {
         c.setName(d.name());
 
         if (d.teacherId() != null) {
-            personRepository.findById(d.teacherId()).ifPresent(p -> {
-                switch (p) {
-                    case Teacher t -> c.setTeacher(t);
-                    case Student _ -> throw new IllegalArgumentException("Cannot assign student as teacher");
-                    case Person _ -> throw new IllegalArgumentException("Unknown person type");
-                }
-            });
+            Teacher t = new Teacher();
+            t.setId(d.teacherId());
+            c.setTeacher(t);
         }
 
         if (d.studentIds() != null) {
-            List<Student> students = d.studentIds().stream()
-                    .map(id -> personRepository.findById(id)
-                            .map(p -> switch (p) {
-                                case Student s -> s;
-                                case Person _ -> null;
-                            })
-                            .orElse(null))
-                    .filter(Objects::nonNull)
-                    .toList();
+            List<Student> students = d.studentIds().stream().map(id -> {
+                Student s = new Student();
+                s.setId(id);
+                return s;
+            }).toList();
             c.setStudents(students);
         }
         return c;
@@ -132,8 +114,6 @@ public class CourseController {
      */
     @GetMapping("/audit-log")
     public List<String> getAuditLog() {
-        return auditService.getAuditLog().stream()
-                .map(auditService::describeEvent)
-                .toList();
+        return service.getAuditLogDescriptions();
     }
 }

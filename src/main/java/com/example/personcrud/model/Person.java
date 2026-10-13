@@ -9,8 +9,13 @@ import jakarta.persistence.InheritanceType;
 import jakarta.persistence.DiscriminatorColumn;
 import jakarta.persistence.DiscriminatorType;
 import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
 
 @Entity
+@Table(name = "person", indexes = {
+        @Index(name = "idx_person_lastname", columnList = "lastName")
+})
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "person_type", discriminatorType = DiscriminatorType.STRING)
 @DiscriminatorValue("PERSON")

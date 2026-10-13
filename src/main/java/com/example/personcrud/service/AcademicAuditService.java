@@ -6,15 +6,20 @@ import com.example.personcrud.event.AcademicEvent.StudentEnrolledEvent;
 import com.example.personcrud.event.AcademicEvent.TeacherAssignedEvent;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
 public class AcademicAuditService {
 
-    private final List<AcademicEvent> auditLog = new ArrayList<>();
+    private static final int MAX_AUDIT_LOG_SIZE = 1000;
+    private final List<AcademicEvent> auditLog = new CopyOnWriteArrayList<>();
 
     public void recordEvent(AcademicEvent event) {
+        if (event == null) return;
+        while (auditLog.size() >= MAX_AUDIT_LOG_SIZE) {
+            auditLog.remove(0);
+        }
         auditLog.add(event);
     }
 
