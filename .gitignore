@@ -16,6 +16,8 @@ frontend/coverage/
 coverage/
 .eslintcache
 frontend/node_modules/.cache/
+frontend/test-results/
+frontend/playwright-report/
 
 # OS metadata
 .DS_Store

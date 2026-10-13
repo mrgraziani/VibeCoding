@@ -395,17 +395,83 @@ In Phase 3, the codebase ascends from Senior implementation craft to **Staff/CTO
 
 ## Testing & Verification
 
-The suite exercises full HTTP lifecycles, database constraints, pattern matching validation, and concurrency performance:
+The project includes multi-layer verification spanning the backend JVM runtime, React component testing, and full-stack end-to-end (E2E) UI browser automation.
+
+### 1. Backend Testing (Spring Boot & JUnit 5)
+
+Exercises HTTP REST lifecycles, database constraints, pattern matching validation, and concurrency performance:
 
 ```bash
-# Run unit & integration tests with preview enabled
+# Run backend unit & integration tests with preview enabled
 mvn test
 
 # Generate JaCoCo code coverage report
 mvn test jacoco:report
 ```
+*JaCoCo reports are output to `target/site/jacoco/index.html`.*
 
-Reports are output to `target/site/jacoco/index.html`.
+---
+
+### 2. Frontend Unit & Component Integration (Jest & React Testing Library)
+
+Validates UI state management, custom hooks (`usePersons`, `useCourses`), multi-lingual translations (i18n), RBAC role-switching, and component workflows in JSDOM without requiring a browser or Docker:
+
+```bash
+cd frontend
+
+# Run all 9 test suites (40 tests) in watch/interactive mode
+npm test
+
+# Run CI mode (single pass without watch)
+npm test -- --watchAll=false
+
+# Generate HTML code coverage report (87% coverage across UI)
+npm run test:coverage
+```
+*Coverage dashboard is output to `frontend/coverage/lcov-report/index.html`.*
+
+---
+
+### 3. End-to-End (E2E) UI Integration Testing (Playwright)
+
+Tests the **entire system stack** (React SPA + Nginx Gateway + Spring Boot + PostgreSQL) through real browser automation in Google Chrome against `http://localhost:3000`.
+
+#### The Complete Academic Lifecycle Test (`frontend/e2e/academic-workflow.spec.js`)
+This test exercises a complete end-to-end user journey across the UI:
+1. **Creates Student 1** via the `#tab-students` form modal and verifies list rendering.
+2. **Creates Teacher 1** via the `#tab-teachers` form modal.
+3. **Creates Course** via `#tab-courses`, selecting Teacher 1 from the dropdown and checking Student 1.
+4. **Enrolls a 2nd Student**: Registers Student 2, edits the course, checks Student 2, and asserts that the enrolled counter updates to **2**.
+5. **Changes Course Teacher**: Registers Teacher 2, edits the course, selects Teacher 2 from the dropdown, and asserts the UI card reflects the new teacher.
+6. **Deletes Everything & Verifies Cleanup**: Deletes the course (accepting `window.confirm`), deletes both students, deletes both teachers, and asserts across all tabs that the database and UI are completely clean.
+
+#### Running E2E Tests:
+
+Ensure the Docker stack is running (`docker compose up -d`), then execute from `frontend/`:
+
+```bash
+cd frontend
+
+# Run E2E integration test in headless mode (default)
+npm run test:e2e
+
+# Run with browser window visible (headed mode)
+npm run test:e2e:headed
+```
+
+#### Interactive Test Dashboards & Visual Reports:
+
+* **Playwright Interactive UI Dashboard (Time-Travel Debugger):**
+  ```bash
+  npm run test:e2e:ui
+  ```
+  Opens a desktop GUI runner where you can press **▶ Play**, watch test steps execute live in real-time, inspect DOM snapshots before and after each click, view network requests, and debug step-by-step.
+
+* **Playwright HTML Report & Traces:**
+  ```bash
+  npm run test:report
+  ```
+  Launches an interactive web dashboard at **`http://localhost:9323`** displaying step timelines, screenshots, network traces, console logs, and duration metrics for every action.
 
 ---
 
