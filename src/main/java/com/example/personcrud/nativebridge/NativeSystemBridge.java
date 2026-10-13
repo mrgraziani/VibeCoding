@@ -42,6 +42,10 @@ public class NativeSystemBridge {
      */
     public String calculateOffHeapDigest(String input) {
         if (input == null) input = "";
+        // Bound input length to prevent unconstrained native off-heap allocation (DoS)
+        if (input.length() > 4096) {
+            input = input.substring(0, 4096);
+        }
         try (Arena arena = Arena.ofConfined()) {
             byte[] bytes = input.getBytes(StandardCharsets.UTF_8);
             MemorySegment segment = arena.allocate(bytes.length);

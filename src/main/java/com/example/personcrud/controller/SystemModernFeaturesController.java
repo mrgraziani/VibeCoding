@@ -28,6 +28,9 @@ public class SystemModernFeaturesController {
 
     @GetMapping("/native-info")
     public Map<String, Object> getNativeDiagnostics(@RequestParam(defaultValue = "Modern Java 25 Test") String payload) {
+        if (payload != null && payload.length() > 1024) {
+            throw new IllegalArgumentException("Payload size exceeds maximum allowed length of 1024 characters");
+        }
         return nativeSystemBridge.getDiagnostics(payload);
     }
 
@@ -35,6 +38,9 @@ public class SystemModernFeaturesController {
     public List<TaskResult> runVirtualThreads(@RequestBody(required = false) List<String> tasks) {
         if (tasks == null || tasks.isEmpty()) {
             tasks = List.of("EnrollmentSync", "GradeReportGen", "AuditLogDigest", "NotificationDispatch");
+        }
+        if (tasks.size() > 50) {
+            throw new IllegalArgumentException("Maximum of 50 tasks allowed per batch execution to prevent resource exhaustion");
         }
         return virtualThreadService.executeTasksInVirtualThreads(tasks);
     }

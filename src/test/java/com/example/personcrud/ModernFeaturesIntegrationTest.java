@@ -172,4 +172,28 @@ class ModernFeaturesIntegrationTest {
         }
         assertThat(auditService.getAuditLog()).isNotEmpty();
     }
+
+    @Test
+    void testSecurityLimitsAndInputValidation() throws Exception {
+        // Exceeding virtual thread task limit (51 tasks)
+        List<String> tooManyTasks = java.util.Collections.nCopies(51, "Task");
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/system/virtual-threads/run")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(tooManyTasks)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("Maximum of 50 tasks allowed")));
+
+        // Invalid cohort size in controller
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/courses/1/cohorts")
+                        .param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("Cohort size must be between 1 and 100")));
+
+        // Native info payload size limit (> 1024 chars)
+        String oversizedPayload = "A".repeat(1025);
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/system/native-info")
+                        .param("payload", oversizedPayload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("Payload size exceeds maximum allowed length")));
+    }
 }

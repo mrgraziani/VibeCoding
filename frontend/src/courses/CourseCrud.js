@@ -400,6 +400,7 @@ export default function CourseCrud() {
                   placeholder={t('courses.courseNamePlaceholder')}
                   value={form.name}
                   onChange={e => setForm({ ...form, name: e.target.value })}
+                  maxLength={100}
                   required
                   autoFocus
                 />

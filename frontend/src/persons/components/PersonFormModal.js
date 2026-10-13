@@ -131,6 +131,7 @@ export default function PersonFormModal({
               placeholder={t('persons.firstNamePlaceholder')}
               value={form.firstName}
               onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))}
+              maxLength={50}
               required
               autoFocus
             />
@@ -146,6 +147,7 @@ export default function PersonFormModal({
               placeholder={t('persons.lastNamePlaceholder')}
               value={form.lastName}
               onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))}
+              maxLength={50}
               required
             />
           </div>
@@ -161,6 +163,7 @@ export default function PersonFormModal({
               placeholder="ada@example.com"
               value={form.email}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+              maxLength={100}
               required
             />
           </div>

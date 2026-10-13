@@ -52,6 +52,11 @@ export default function Java25Dashboard() {
       return;
     }
 
+    if (taskList.length > 20) {
+      addToast('Máximo 20 tareas concurrentes permitidas para proteger el servidor', 'warning');
+      return;
+    }
+
     setRunningVt(true);
     setVtResults([]);
     setActiveTasks(taskList);
@@ -154,6 +159,7 @@ export default function Java25Dashboard() {
               value={payloadText}
               onChange={e => setPayloadText(e.target.value)}
               placeholder={t('dashboard.payloadPlaceholder')}
+              maxLength={256}
             />
           </div>
         </div>
@@ -205,6 +211,7 @@ export default function Java25Dashboard() {
             value={customTasks}
             onChange={e => setCustomTasks(e.target.value)}
             disabled={runningVt}
+            maxLength={300}
           />
         </div>
 

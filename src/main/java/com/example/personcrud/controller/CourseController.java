@@ -85,6 +85,9 @@ public class CourseController {
      */
     @GetMapping("/{id}/cohorts")
     public List<List<Long>> getCohorts(@PathVariable Long id, @RequestParam(defaultValue = "3") int size) {
+        if (size <= 0 || size > 100) {
+            throw new IllegalArgumentException("Cohort size must be between 1 and 100");
+        }
         return service.getStudentCohorts(id, size).stream()
                 .map(group -> group.stream().map(Student::getId).toList())
                 .toList();

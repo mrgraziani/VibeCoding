@@ -16,8 +16,19 @@ public class VirtualThreadService {
      * Simulates realistic parallel I/O and processing across lightweight Virtual Threads.
      */
     public List<TaskResult> executeTasksInVirtualThreads(List<String> taskNames) {
+        if (taskNames == null || taskNames.isEmpty()) {
+            return List.of();
+        }
+        if (taskNames.size() > 50) {
+            throw new IllegalArgumentException("Maximum of 50 tasks allowed per batch execution to prevent resource exhaustion");
+        }
+        List<String> sanitizedTasks = taskNames.stream()
+                .filter(name -> name != null && !name.isBlank())
+                .map(name -> name.trim().length() > 80 ? name.trim().substring(0, 80) : name.trim())
+                .toList();
+
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            List<Future<TaskResult>> futures = taskNames.stream()
+            List<Future<TaskResult>> futures = sanitizedTasks.stream()
                     .map(name -> executor.submit(() -> {
                         long start = System.currentTimeMillis();
                         Thread current = Thread.currentThread();
