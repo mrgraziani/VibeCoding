@@ -1,0 +1,6 @@
+export const PERSON_ROLES = {
+  STUDENT: 'STUDENT',
+  TEACHER: 'TEACHER',
+};
+
+export const DEFAULT_ROLE = PERSON_ROLES.STUDENT;

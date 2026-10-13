@@ -266,4 +266,49 @@ describe('PersonCrud Component', () => {
       expect(apiClient.delete).toHaveBeenCalledWith('/persons/1');
     });
   });
+
+  test('closes form modal on Escape key press', async () => {
+    render(
+      <ToastProvider>
+        <PersonCrud filterType="STUDENT" />
+      </ToastProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Alan Turing')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /\+ New Student|Create Student/i }));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('e.g. Ada')).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText('e.g. Ada')).not.toBeInTheDocument();
+    });
+  });
+
+  test('closes view modal on Escape key press', async () => {
+    render(
+      <ToastProvider>
+        <PersonCrud filterType="STUDENT" />
+      </ToastProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Alan Turing')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /View Profile/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/Student Profile: Alan Turing/i)).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
+    await waitFor(() => {
+      expect(screen.queryByText(/Student Profile: Alan Turing/i)).not.toBeInTheDocument();
+    });
+  });
 });
+
