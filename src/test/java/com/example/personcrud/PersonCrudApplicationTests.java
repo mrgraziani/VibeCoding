@@ -12,7 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-
+import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -96,6 +96,7 @@ class PersonCrudApplicationTests {
     void testFindByLastName() throws Exception {
         PersonDto p1 = new PersonDto(null, "David", "Smith", "david.smith@example.com");
         PersonDto p2 = new PersonDto(null, "Eve", "Johnson", "eve.johnson@example.com");
+        PersonDto p3 = new PersonDto(null, "Bob", "Smithson", "bob.smithson@example.com");
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/persons")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -107,10 +108,67 @@ class PersonCrudApplicationTests {
                         .content(objectMapper.writeValueAsString(p2)))
                 .andExpect(status().isCreated());
 
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/persons")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(p3)))
+                .andExpect(status().isCreated());
+
+        // Exact full match should work
         mockMvc.perform(MockMvcRequestBuilders.get("/api/persons/search")
                         .param("lastName", "smith"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("[0].lastName").value("Smith"));
+                .andExpect(jsonPath("$.length()").value(2)); // Matches "Smith" and "Smithson"
+
+        // Prefix match (LIKE prefix%) case-insensitive should work
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/persons/search")
+                        .param("lastName", "smi"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/persons/search")
+                        .param("lastName", "John"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("[0].lastName").value("Johnson"));
+    }
+
+    @Test
+    void testSearchTeachersByLastNamePrefix() throws Exception {
+        PersonDto t1 = new PersonDto(null, "Ada", "Lovelace", "ada.lovelace.prefix@example.com", "TEACHER");
+        PersonDto t2 = new PersonDto(null, "Howard", "Lovecraft", "howard.lovecraft@example.com", "TEACHER");
+        PersonDto t3 = new PersonDto(null, "Alan", "Turing", "alan.turing.prefix@example.com", "TEACHER");
+        PersonDto s1 = new PersonDto(null, "Sam", "Lovering", "sam.lovering@example.com", "STUDENT");
+
+        for (PersonDto p : List.of(t1, t2, t3, s1)) {
+            mockMvc.perform(MockMvcRequestBuilders.post("/api/persons")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(p)))
+                    .andExpect(status().isCreated());
+        }
+
+        // Search with prefix "love" without type filter returns all persons matching prefix (teachers + student)
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/persons/search")
+                        .param("lastName", "love"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3));
+
+        // Search with prefix "love" and personType=TEACHER returns only the 2 teachers
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/persons/search")
+                        .param("lastName", "love")
+                        .param("personType", "TEACHER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].personType").value("TEACHER"))
+                .andExpect(jsonPath("$[1].personType").value("TEACHER"));
+
+        // Search with prefix "Tur" and personType=TEACHER matches Turing
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/persons/search")
+                        .param("lastName", "Tur")
+                        .param("personType", "TEACHER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("[0].lastName").value("Turing"))
+                .andExpect(jsonPath("[0].personType").value("TEACHER"));
     }
 
     @Test

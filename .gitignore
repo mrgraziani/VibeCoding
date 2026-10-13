@@ -8,5 +8,10 @@ target/
 # Python Virtual Environment
 .pdf-venv/
 
+# Frontend
+node_modules/
+frontend/node_modules/
+frontend/build/
+
 # OS metadata
 .DS_Store

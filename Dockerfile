@@ -14,6 +14,8 @@ RUN mvn -B -DskipTests package
 FROM eclipse-temurin:latest
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Copy jar from build stage
 COPY --from=build /build/target/person-crud-0.0.1-SNAPSHOT.jar app.jar
 

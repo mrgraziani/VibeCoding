@@ -25,7 +25,10 @@ public class PersonService {
     }
 
     public List<Person> findByLastName(String lastName) {
-        return repository.findByLastNameIgnoreCase(lastName);
+        if (lastName == null || lastName.isBlank()) {
+            return repository.findAll();
+        }
+        return repository.findByLastNameStartingWithIgnoreCase(lastName.trim());
     }
 
     public Person create(Person person) {
