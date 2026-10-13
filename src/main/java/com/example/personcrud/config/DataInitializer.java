@@ -5,7 +5,10 @@ import com.example.personcrud.model.Student;
 import com.example.personcrud.model.Teacher;
 import com.example.personcrud.repository.CourseRepository;
 import com.example.personcrud.repository.PersonRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -13,8 +16,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Gatherers;
 
+/**
+ * Development & local environment data seeder.
+ * Excluded from production via @Profile("!prod") to guarantee data integrity.
+ */
 @Component
+@Profile("!prod")
 public class DataInitializer implements CommandLineRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
 
     private final PersonRepository personRepository;
     private final CourseRepository courseRepository;
@@ -26,7 +36,7 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // don't insert sample data if database already has persons
+        // Don't insert sample data if database already contains records
         if (personRepository.count() > 0) return;
 
         // Create 4 teachers
@@ -39,17 +49,21 @@ public class DataInitializer implements CommandLineRunner {
 
         List<Teacher> savedTeachers = new ArrayList<>();
         for (Teacher t : teachers) {
-            savedTeachers.add((Teacher) personRepository.save(t));
+            if (personRepository.save(t) instanceof Teacher saved) {
+                savedTeachers.add(saved);
+            }
         }
 
         // Create 20 students
         List<Student> students = new ArrayList<>();
         for (int i = 1; i <= 20; i++) {
             Student s = new Student("Student" + i, "Lastname" + i, "student" + i + "@example.com");
-            students.add((Student) personRepository.save(s));
+            if (personRepository.save(s) instanceof Student saved) {
+                students.add(saved);
+            }
         }
 
-        // Use Stream Gatherers (Gatherers.windowFixed) to partition students into 5 cohorts of 4 students each
+        // Use Stream Gatherers (Gatherers.windowFixed) to partition students into cohorts
         List<List<Student>> cohorts = students.stream()
                 .gather(Gatherers.windowFixed(4))
                 .toList();
@@ -67,6 +81,8 @@ public class DataInitializer implements CommandLineRunner {
 
         courseRepository.saveAll(courses);
 
-        System.out.println("Seeded database with " + savedTeachers.size() + " teachers, " + students.size() + " students and " + courses.size() + " courses using Stream Gatherers.");
+        log.info("Seeded database with {} teachers, {} students, and {} courses using Stream Gatherers.",
+                savedTeachers.size(), students.size(), courses.size());
     }
 }
+

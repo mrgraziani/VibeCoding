@@ -245,4 +245,13 @@ class CourseApiTests {
         // Only the actual student should be enrolled
         assertThat(created.studentIds()).containsExactly(student.getId());
     }
+
+    @Test
+    void testListCoursesPaged() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/courses?page=0&size=10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.size").value(10))
+                .andExpect(jsonPath("$.number").value(0));
+    }
 }

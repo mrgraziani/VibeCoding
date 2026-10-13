@@ -1,86 +1,241 @@
-# VibeCoding
+# AI-Assisted Architecture: From Unsupervised "Vibe Coding" to Senior Engineering Governance
 
-An experiment in letting an AI agent author an entire application.
+> **A case study in modern software engineering:** What happens when an AI agent authors an entire application unsupervised, why green tests and 97% code coverage mask catastrophic architectural failures, and how a Senior Engineer takes control to enforce domain integrity, operational reliability, and pragmatic language modernization.
 
-**The rules I set for myself:** I would write prompts and nothing else. No editing code by hand, no fixing a variable name, no nudging a file into place. If something was wrong, I had to ask for it to be changed and accept whatever came back. The code in this repository is exactly what came out of that process, left deliberately unreviewed — the point was to see what it produces, not to ship it.
+---
 
-It was built in a single session on 2025-11-27. The first commit message is `All created by prompt`.
+## Executive Summary
 
-## What it is
+This repository documents the evolution of a web application across two fundamentally different paradigms of AI-assisted software development:
 
-A small school management app: people (students and teachers) and courses, with CRUD on both.
+1. **Phase 1 — The "Vibe Coding" Experiment (November 2025):** An autonomous AI agent was given free rein to generate a school management CRUD application with zero human intervention. Prompts were supplied; whatever code returned was committed as-is. The resulting code compiled, passed integration tests, achieved 97% line coverage, and ran smoothly on `localhost`. Yet, beneath the surface, the domain model was collapsed, the database was ephemeral and insecure, error handling was nonexistent, and the tests were a closed-loop confirmation bias engine.
+2. **Phase 2 — Senior Architectural Governance & The Economics of Modernization (October 2026):** A Senior Engineer intervened to transform the codebase from a fragile toy demo into an enterprise-grade, hardened architecture. Beyond fixing operational foundations (**PostgreSQL 16**, **Flyway**, non-root Docker, centralized error handling), this phase tackles a major historical bottleneck in software engineering: **the cost of library and runtime upgrades**. Instead of a passive "version bump" that only changes numbers in `pom.xml` while leaving code frozen in legacy idioms, we used the AI as a high-leverage refactoring engine to **actively exploit new platform capabilities** (Java Records, Pattern Matching, Sealed Events, Virtual Threads). Crucially, bleeding-edge experimental APIs (Project Panama FFM, Stream Gatherers) were quarantined into an isolated **Educational Technology Lab**, establishing clear architectural boundaries between business domain logic and systems experimentation.
 
-| Layer | Stack |
-|---|---|
-| Backend | Spring Boot 3.1.4, Java 17, Spring Data JPA / Hibernate 6.2.9 |
-| Database | H2, in-memory, `ddl-auto=update`, seeded on startup |
-| Frontend | React 18.2, Create React App, axios, Bootstrap 5.3 |
-| Build | Maven, Jacoco |
-| Runtime | Docker Compose — `eclipse-temurin:17-jdk-jammy` + `nginx:stable-alpine` |
+---
 
-About 1,580 lines of source across 34 files: 13 Java classes, 2 test classes, 5 React components. (The repository itself is much larger, because `node_modules/` and `target/` were committed — there is no `.gitignore`. That is part of the artifact too.)
+## System Architecture: Then vs. Now
 
-## Running it
+| Dimension | Phase 1: Unsupervised "Vibe Coding" | Phase 2: Senior Architectural Governance |
+|---|---|---|
+| **Architectural Posture** | Naive CRUD; logic pushed to the browser | Layered Domain Architecture; server-side enforcement |
+| **Upgrade Strategy** | Stagnant baseline | **Active Modernization:** Refactored to leverage new platform capabilities |
+| **Java Platform** | Java 17 (standard boilerplate JavaBeans) | Modern Java with Records, Pattern Matching & Sealed Hierarchies |
+| **Concurrency Model** | Platform Threads (OS-bound thread pool) | Virtual Threads (Project Loom) for high-throughput HTTP |
+| **Database & Persistence** | In-memory H2, `ddl-auto=update` (ephemeral) | PostgreSQL 16, persistent volumes, Hibernate `ddl-auto=validate` |
+| **Schema Evolution** | None (Hibernate auto-generation) | Automated, versioned migrations via **Flyway** (`V1__init_schema.sql`) |
+| **Exception Handling** | None; unhandled 500s & raw `ClassCastException` | Centralized `@RestControllerAdvice` with RFC 7807 compliant error contracts |
+| **Security & Operations** | Root Docker container; exposed H2 console | Non-root `appuser`; Nginx reverse proxy with security headers |
+| **Frontend Architecture** | Monolithic CRA views; silent `console.error` catches | Custom hooks (`usePersons`, `useCourses`), race condition guards, i18n, Toast alerts |
+| **Language Lab** | N/A | Dedicated Educational Sandbox for FFM API (Project Panama) & Gatherers |
+
+---
+
+## Quickstart
+
+Run the full production-grade multi-container stack with a single command:
 
 ```bash
 docker compose up --build
 ```
 
-Frontend on `http://localhost:3000`, API on `http://localhost:8080/api`. The database seeds itself with 4 teachers, 20 students and 5 courses on startup.
+### Services & Entrypoints
 
-> ⚠️ **Do not expose this.** The H2 console is reachable without authentication at `/h2-console`, which means anyone who can reach port 8080 can run arbitrary SQL. A comment in `application.properties` claims the production profile disables it. The configuration does the opposite. This is one of the findings, not an oversight I later fixed.
+| Service | Address | Description |
+|---|---|---|
+| **Web UI** | `http://localhost:3000` | React 18 SPA served via Nginx reverse proxy with security headers |
+| **API Gateway** | `http://localhost:3000/api` | Reverse-proxied to Spring Boot (injects `X-Frame-Options`, `X-Content-Type-Options`) |
+| **Backend API** | `http://localhost:8080/api` | Spring Boot 3.4.2 REST API with Virtual Threads & Flyway |
+| **PostgreSQL 16** | `localhost:5432` | Relational database (`persondb`) with persistent volume `postgres_data` |
 
-## What came out well
-
-Worth saying, because it is the interesting part: the code does not look bad.
-
-- The backend layering is conventional and readable — controller → service → repository, DTOs at the boundary, constructor injection throughout.
-- The tests are real. `@SpringBootTest` integration tests that exercise HTTP endpoints and assert on actual response content, including a full create → read → update → delete lifecycle. No mock theatre, no `assertTrue(true)`.
-- 97% line coverage, reported by Jacoco.
-- It builds and runs from a clean checkout.
-
-If someone had handed me this as a pull request, I would have read the structure and been reasonably happy.
-
-## What came out wrong
-
-Everything that mattered was one layer above the code.
-
-**The domain model collapsed the distinction it was supposed to make.** `Person` uses single-table inheritance with a discriminator column, and `Student` and `Teacher` are subclasses with no fields and no behaviour of their own. There is no `/api/students` and no `/api/teachers` — only `/api/persons`, which returns all three types in one list. The React app compensates by filtering on `personType` in the browser, doing the separation the API should have done.
-
-**The update endpoint lies.** `PUT /api/persons/{id}` accepts a `personType` in the payload, returns `200 OK`, and silently discards it. The service copies only `firstName`, `lastName` and `email` onto the existing entity. Ask it to turn a student into a teacher and it will tell you it worked.
-
-**Unchecked downcasts, duplicated four times.** `(Teacher) person` with no type check, in both `CourseService` and `CourseController`. Posting a course with a `teacherId` that points at a student produces a bare `ClassCastException` and an HTTP 500. There is no `@ControllerAdvice` anywhere in the codebase.
-
-**The coverage number hid the gap.** 97% of lines, but 50% of branches — and all nine untested branches sit in the two classes containing those casts. `Student` and `Teacher` both report 100% coverage, and not one test ever asserts that creating a student produces a student. The tests were derived from the code, so they encode what the code already does rather than what I had asked for.
-
-**Comments describing software that does not exist.** The H2 console comment above. A `// keep existing 4-arg constructor for compatibility` note in a repository with a single commit and no external consumers — and the constructor it preserves compatibility with has no callers at all. Dead code with an invented history to justify it.
-
-**Silent failures in the UI.** Four `.catch(console.error)` handlers in `PersonCrud.js`: a failed create, update or delete produces no user-visible feedback at all. Elsewhere an error object is rendered directly, so the user sees `[object Object]`.
-
-**It works partly by accident.** `frontend/Dockerfile` declares `ARG REACT_APP_API_URL` before the first `FROM`, so it resolves to an empty string and the compose build-arg is discarded. The hardcoded `http://localhost:8080/api` fallback wins, which happens to be correct for a browser. Had the ARG worked, a Docker-internal hostname would have been baked into a bundle running in the browser, and nothing would have loaded. The nginx reverse proxy that should have solved this properly is unused — and misrouted anyway.
-
-## What I took from it
-
-**The failure was never in the implementation.** Every individual piece was competently written. The problem was one level up: what the entities are, what must never be true of the data, what one row in a table actually represents. That layer is not code, and it is where the whole thing went wrong.
-
-**Green tests told me nothing about it.** Coverage measures how much of the code you executed, not whether the code is the code you wanted. An agent that writes both the implementation and its tests will produce a suite that agrees with itself. High coverage on the wrong abstraction is a faster way to be confident about the wrong thing.
-
-**Better-looking iterations are not converging iterations.** I asked for rewrites repeatedly. Each version was cleaner than the last and none of them fixed the model, because the model was never what I was critiquing — I was reacting to symptoms.
-
-**It never asked.** I never specified the invariants that separate a student from a teacher, and the agent did not ask for them. It inferred a foundation, and then built on it faithfully and well.
-
-The conclusion I carry into production work: define the model yourself, then put agents to work reviewing it. Author-then-review by the same system is a closed loop. Reviewers that ask *"is this the right shape?"* are worth more than authors that ask nothing at all.
-
-## Modernizing the Stack: Adopting New Language & Framework Features
-
-Rather than treating the modernization as a superficial version bump in `pom.xml` and `package.json`, the codebase was overhauled to actively leverage the features introduced in **Java 21–25**, **Spring Boot 3.4.2**, and modern **React 18**. Each upgrade directly targeted and resolved the architectural and structural flaws identified in the original experiment.
+*Healthcheck dependencies guarantee PostgreSQL is fully accepting connections (`pg_isready`) before Spring Boot starts Flyway migrations, and Spring Boot is verified healthy before Nginx serves user traffic.*
 
 ---
 
-### 1. Java 25 & Modern Language Features (JEPs in Action)
+# Act I: The Baseline Experiment (The "Vibe Coding" Trap)
 
-#### Immutable Records & Compact Constructors (`PersonDto`, `CourseDto`)
-Boilerplate JavaBean classes with mutable state and verbose getters/setters were replaced with immutable Java records paired with Jakarta Bean Validation (`@NotBlank`, `@Email`, `@Size`):
+### The Rules of the Experiment
+The original experiment was conducted in a single session on 2025-11-27 with one rigid rule: **I would write prompts and nothing else.**
+No editing code by hand. No fixing variable names. No nudging configuration files into place. If something was wrong, I asked for a change and accepted whatever the agent generated. The initial commit was `All created by prompt`.
+
+### The Mirage: What Looked Good on the Surface
+On paper, the initial output was remarkably competent:
+- **Clean layering:** Strict Controller → Service → Repository layout with constructor injection and DTO boundaries.
+- **Real integration tests:** Spring Boot `@SpringBootTest` suites executing real HTTP lifecycles (Create → Read → Update → Delete) with JSON assertions.
+- **97% Line Coverage:** Reported by JaCoCo.
+- **Zero setup friction:** It compiled and launched cleanly from a fresh checkout.
+
+If submitted as an ordinary Pull Request, many teams would have stamped it with an immediate approval.
+
+### The Reality: What Broke Behind the Green Tests
+The failure was not in syntax or style; **the failure was entirely in the architectural layer above the code:**
+
+1. **The domain model collapsed the distinction it was supposed to make:**
+   `Person` used single-table inheritance with a discriminator column. `Student` and `Teacher` were subclasses with zero fields and zero unique behaviors. There was no `/api/students` and no `/api/teachers`—only `/api/persons`. The React frontend was forced to download the entire database and filter by `personType` in JavaScript, doing the job the API should have done.
+2. **The update endpoint silently lied:**
+   `PUT /api/persons/{id}` accepted a `personType` in the payload, returned `200 OK`, and silently discarded it. The service only copied `firstName`, `lastName`, and `email`. If an administrator attempted to change a student into a teacher, the API claimed success while mutating nothing.
+3. **Unchecked downcasts generated unhandled 500 errors:**
+   The codebase contained bare `(Teacher) person` casts without type safety in both `CourseService` and `CourseController`. Assigning a student ID as a teacher produced a raw `ClassCastException` and an HTTP 500 stack trace leak. There was no `@ControllerAdvice` anywhere.
+4. **The coverage metric was a vanity illusion:**
+   97% line coverage masked that **50% of execution branches were completely untested**—and all untested branches sat precisely in the methods performing unsafe downcasts. `Student` and `Teacher` reported 100% coverage, yet not a single test asserted that creating a student actually produced a student entity. The tests were generated from the code rather than the domain requirements, encoding existing bugs as expected behavior.
+5. **AI alucinating software that did not exist:**
+   Comments stated that the production profile disabled the H2 console, yet the configuration did the exact opposite. Another comment read `// keep existing 4-arg constructor for compatibility` in a greenfield repository with one commit and zero callers—dead code justified by an invented history.
+6. **Docker worked entirely by accident:**
+   `frontend/Dockerfile` placed `ARG REACT_APP_API_URL` before the first `FROM`, causing Docker to discard the build argument. It fell back to a hardcoded string `http://localhost:8080/api`. Had the argument worked, a Docker-internal container hostname would have been baked into client-side browser bundles, completely breaking networking.
+
+### Core Takeaway from Act I
+> **An AI agent that writes both the implementation and its tests creates a closed-loop confirmation bias engine.**
+> Coverage measures how much code was executed, not whether the code satisfies business requirements. High coverage over the wrong abstraction only produces unearned confidence in broken software.
+
+---
+
+# Act II: The Senior Intervention (Architectural & Production Governance)
+
+In Phase 2, the human engineer took the helm—not by rewriting every line manually, but by acting as an **Architectural Governor**: defining strict system constraints, enforcing domain boundaries, and rejecting superficial LLM suggestions.
+
+```mermaid
+graph TD
+    subgraph Client Layer
+        Browser[Browser SPA] -->|Port 3000| Nginx[Nginx Reverse Proxy]
+    end
+
+    subgraph Containerized Infrastructure
+        Nginx -->|/api/| Gateway[Security Headers & Rate Limits]
+        Gateway --> SpringBoot[Spring Boot 3.4.2 Core]
+        SpringBoot -->|Virtual Threads| Loom[Tomcat Virtual Thread Dispatcher]
+        SpringBoot -->|Flyway Migrations| FlywayEngine[Flyway Migration Engine]
+        FlywayEngine --> Postgres[(PostgreSQL 16 Persistent DB)]
+        SpringBoot --> JPA[(Hibernate Schema Validation: validate)]
+    end
+
+    subgraph Educational Tech Lab
+        SpringBoot -.-> PanamaBridge[Project Panama FFM API Bridge]
+        SpringBoot -.-> GatherersPipeline[Stream Gatherers Windowing]
+        SpringBoot -.-> AuditEvents[Sealed Domain Audit Log]
+    end
+```
+
+### 1. Enterprise Persistence & Database Evolution
+- **PostgreSQL 16 Multi-Container Stack:** Replaced ephemeral in-memory H2 with production-grade `postgres:16-alpine` backed by a persistent Docker named volume (`postgres_data`).
+- **Versioned Migrations with Flyway:** Database schema evolution is now strictly managed via versioned migration scripts (`src/main/resources/db/migration/V1__init_schema.sql`).
+- **Strict Hibernate Validation:** Switched Hibernate from destructive auto-updates to `spring.jpa.hibernate.ddl-auto=validate`. Hibernate verifies schema compatibility against Flyway at startup without altering database tables.
+- **Database Startup Orchestration:** Docker Compose coordinates container dependencies through explicit healthchecks (`pg_isready -U postgres`), preventing Spring Boot from crashing during cold boots.
+
+### 2. Resilience, Error Boundaries & Query Optimization
+- **Centralized `@RestControllerAdvice`:** Introduced `GlobalExceptionHandler` with typed handlers:
+  - `IllegalArgumentException` → 400 Bad Request
+  - `MethodArgumentNotValidException` → 400 Bad Request with field-level constraint violation details
+  - `DataIntegrityViolationException` → 409 Conflict (handling unique email and foreign key violations gracefully)
+  - `Exception` → 500 Internal Server Error with sanitized error messages to prevent stack trace leaks
+- **N+1 Query Elimination:** In `CourseService`, sequential single-entity lookups in loops were replaced by batch fetching via `personRepository.findAllById(ids)` and in-memory hash indexing, reducing database roundtrips from $O(N)$ to $O(1)$.
+- **Database-Level Filtering:** Relocated role and prefix search from client-side memory to indexed JPQL queries (`TYPE(p) = :type` and `findByLastNameStartingWithIgnoreCase`), backed by database index `idx_person_lastname`.
+
+### 3. Container Hardening & Operational Security
+- **Multi-Stage Non-Root Docker Build:** Refactored `Dockerfile` into a multi-stage builder creating an unprivileged system user (`USER appuser`), mitigating container breakout vulnerabilities.
+- **Reverse Proxy Architecture:** Configured Nginx (`default.conf`) to serve static React artifacts while reverse-proxying `/api/` traffic to the backend container.
+- **HTTP Security Headers:** Nginx enforces enterprise defense-in-depth headers:
+  - `X-Frame-Options: SAMEORIGIN` (Clickjacking mitigation)
+  - `X-Content-Type-Options: nosniff` (MIME-sniffing protection)
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `X-XSS-Protection: 1; mode=block`
+- **Docker Build-Arg Scope Fix:** Relocated `ARG REACT_APP_API_URL` below the `FROM node:18-alpine` line, ensuring build parameters properly inject into the Webpack/React production bundle.
+
+### 4. Frontend Engineering Discipline
+- **Modular Component Hierarchy:** Decomposed monolithic views into focused, reusable components (`CourseFormModal`, `CourseViewModal`, `PersonFormModal`, `PersonViewModal`).
+- **Custom Hook Separation:** Extracted data fetching, caching, and state transitions into dedicated hooks (`usePersons`, `useCourses`).
+- **Asynchronous Race Condition Defense:** Implemented sequence request tracking via `useRef(latestRequestIdRef)` in `usePersons`. Rapid typing in search inputs automatically discards stale out-of-order network responses.
+- **Internationalization (i18n):** Built dynamic localization (`I18nProvider`) supporting English, Spanish, and French with automatic browser locale negotiation and local storage persistence.
+- **Interactive User Feedback (`ToastContext`):** Replaced silent `.catch(console.error)` swallowed promises and raw `[object Object]` alert strings with an interactive, multi-severity Toast notification system.
+
+---
+
+# Act III: The Economics of Upgrades — From Passive Version Bumps to Active AI Modernization
+
+### The Historical Friction: The "Passive Version Bump" Trap
+
+In traditional enterprise software engineering, upgrading dependencies, runtimes, or major frameworks (such as moving from Java 8/11 to Java 17/21, Spring Boot 2.x to 3.x, or React 16 to 18) has historically been treated as a **painful, defensive, and high-risk chore**.
+
+The standard industry operating procedure was minimal:
+1. Change the version string in `pom.xml` or `package.json`.
+2. Fix whatever compiler errors or breaking API changes immediately broke the build.
+3. Suppress deprecation warnings with `@SuppressWarnings("deprecation")`.
+4. Merge the Pull Request and pray that nothing regresses in production.
+
+**The result was a profound waste of engineering capital:**
+Teams paid the friction, regression testing risk, and deployment overhead of a major migration, yet **the codebase remained mentally frozen in the past**. 
+- The project ran on Java 21, but the code was still written as if it were Java 8: bloated JavaBeans with mutable setters, defensive `if (x != null)` cascades, manual thread-pool tuning, and brittle downcasts.
+- The project ran on React 18, but components were still monolithic blobs with legacy lifecycle habits.
+
+Why did this happen? **Because the cost of deep, idiomatic refactoring was economically prohibitive.** Manually rewriting hundreds of DTOs into immutable Records, replacing type checks with pattern matching, and redesigning concurrency models around Virtual Threads would take weeks of senior developer time. In real-world companies, product managers and business stakeholders almost never approve multi-sprint refactoring efforts that offer "no visible new features." 
+
+Consequently, software stayed architecturally obsolete even when running on modern runtimes.
+
+---
+
+### The Paradigm Shift: Active Modernization Powered by AI
+
+When a Senior Engineer directs an AI agent, **the economic cost curve of refactoring collapses**. 
+
+A task that previously took 40 hours of tedious manual typing and search-and-replace can now be executed and verified in minutes under strict architectural supervision. This enables a fundamental shift in technical strategy:
+
+> **The goal is no longer just using a newer library version. The goal is having a genuinely more modern, resilient product.**
+> 
+> Anyone can bump a version in Maven. A Senior leveraging AI exploits the platform upgrade to eliminate boilerplate, eradicate entire classes of runtime bugs, and unlock higher operational throughput.
+
+```
+Traditional Upgrade Workflow:
+[Bump Version in pom.xml] ──> [Fix Compiler Errors] ──> [Stop / Ship]
+                                                           │
+                                                           └──> Same old code, higher maintenance debt.
+
+AI-Governed Modernization Workflow:
+[Bump Version] ──> [Prompt Architectural Refactoring] ──> [Adopt Platform Primitives] ──> [Senior Review]
+                          │                                      │
+                          ├──> JavaBeans ➔ Records               ├──> Thread Pools ➔ Virtual Threads
+                          └──> Downcasts ➔ Pattern Matching       └──> Monoliths ➔ Modular Hooks
+```
+
+### The ROI Comparison Matrix
+
+| Dimension | The Traditional "Passive Version Bump" | AI-Governed Active Modernization |
+|---|---|---|
+| **Primary Motivation** | Compliance, security CVE patches, forced end-of-life | **Product & Architectural Transformation** |
+| **Refactoring Depth** | Surface-level (patch only breaking compiler errors) | Structural & idiomatic across all layers |
+| **Data Transfer Objects** | Retains mutable classes with 60+ lines of getters/setters | Compact immutable **Java Records** with contract validation |
+| **Type Safety & Branching** | Imperative `instanceof` with dangerous downcasts | Compiler-exhaustive **Pattern Matching for switch** |
+| **Concurrency & Throughput** | Heavy OS platform threads; complex thread-pool tuning | Non-blocking **Virtual Threads** across all HTTP handlers |
+| **Developer Ergonomics** | Verbose, legacy syntax; high cognitive load | Clean, declarative, expressive code; zero boilerplate |
+| **Business Value** | **Pure maintenance cost** (zero architectural dividend) | **High-ROI modernization** (faster, safer, cheaper to maintain) |
+
+---
+
+## Architectural Discipline: Core Value vs. Speculative Chasing
+
+However, an AI agent given unconstrained instructions will happily chase novelty for its own sake, shoehorning every new language feature into the codebase regardless of appropriateness (**Resume-Driven Development**).
+
+A Senior Engineer enforces **architectural boundaries**:
+- **Core Architecture:** Modern platform features that solve real business and engineering problems (Records, Pattern Matching, Sealed Events, Loom) belong in the production path.
+- **Educational Technology Lab:** Bleeding-edge or low-level systems features (Project Panama FFM API, Stream Gatherers) are intentionally quarantined into a diagnostic module, preventing experimental complexity from contaminating transactional business logic.
+
+```
+src/main/java/com/example/personcrud/
+├── controller/                 <-- CORE: Clean REST contracts & Global Advice
+├── service/                    <-- CORE: Business rules, batch queries & validation
+├── model/                      <-- CORE: JPA Entities (Course, Person, Student, Teacher)
+├── dto/                        <-- CORE: Immutable Records with Jakarta Validation
+├── event/                      <-- CORE: Sealed Domain Events
+│
+└── nativebridge/               <-- LAB: Isolated Foreign Function & Memory (FFM) API
+└── service/VirtualThreadService<-- LAB: Dedicated Concurrency Benchmark & Telemetry
+```
+
+---
+
+## Tier A: Core Architecture (Production Value in Action)
+
+These modern primitives were adopted because they directly solve domain and runtime problems identified in the original experiment:
+
+### 1. Immutable Records & Compact Constructors (`PersonDto`, `CourseDto`)
+Instead of legacy mutable POJOs, DTOs are declared as immutable Java records with defensive normalization and Jakarta Bean Validation (`@NotBlank`, `@Email`, `@Size`):
 
 ```java
 public record CourseDto(
@@ -98,29 +253,11 @@ public record CourseDto(
 }
 ```
 
-#### Pattern Matching for `switch`, Record Patterns & Unnamed Variables (JEP 440, 441, 456)
-The original implementation relied on dangerous downcasts (`(Teacher) person`) and clunky `if-else` type inspections. This was overhauled in two key areas:
+### 2. Pattern Matching for `switch`, Record Patterns & Guards (JEP 440, 441, 456)
+Eliminated dangerous `(Teacher) person` downcasts and clumsy `if-else` type inspections across the service layer:
 
-1. **Safe polymorphic entity creation with guards (`when`) and unnamed patterns (`_`):**
 ```java
-// PersonController.java
-private Person toEntity(PersonDto d) {
-    Person p = switch (d) {
-        case PersonDto(_, var first, var last, var email, var type) when "TEACHER".equals(type) ->
-                new Teacher(first, last, email);
-        case PersonDto(_, var first, var last, var email, var type) when "STUDENT".equals(type) ->
-                new Student(first, last, email);
-        case PersonDto(_, var first, var last, var email, _) ->
-                new Person(first, last, email);
-    };
-    p.setId(d.id());
-    return p;
-}
-```
-
-2. **Elimination of unchecked downcasts in `CourseService`:**
-```java
-// CourseService.java - Resolving teacher assignment without ClassCastException
+// Safe entity assignment in CourseService without ClassCastException
 Person p = personRepository.findById(teacherId)
         .orElseThrow(() -> new IllegalArgumentException("Teacher not found"));
 
@@ -131,8 +268,8 @@ switch (p) {
 }
 ```
 
-#### Sealed Hierarchies & Exhaustive Domain Events (JEP 409)
-To model domain events cleanly, an `AcademicEvent` sealed interface was introduced. Because the hierarchy is sealed, pattern matching switches are guaranteed to be exhaustive by the compiler without requiring a fallthrough `default` clause:
+### 3. Sealed Hierarchies & Exhaustive Domain Events (JEP 409)
+Domain events are modeled via a `sealed interface`. The Java compiler enforces pattern-matching exhaustiveness at compile time, eliminating fragile `default` fallbacks:
 
 ```java
 // AcademicEvent.java
@@ -144,7 +281,7 @@ public sealed interface AcademicEvent {
     record CourseCreatedEvent(Long courseId, String courseName, Long teacherId) implements AcademicEvent {}
 }
 
-// AcademicAuditService.java - Compiler-checked exhaustiveness & record deconstruction
+// AcademicAuditService.java - Compiler-verified exhaustiveness & record deconstruction
 public String describeEvent(AcademicEvent event) {
     return switch (event) {
         case StudentEnrolledEvent(var courseId, var studentId, var courseName) ->
@@ -157,57 +294,19 @@ public String describeEvent(AcademicEvent event) {
 }
 ```
 
-#### Stream Gatherers (JEP 461 / JEP 473 — Java Preview)
-Instead of manual partitioning loops, `Stream.gather()` is used to break down student enrollments into cohort windows using `Gatherers.windowFixed()`:
+### 4. Application-Wide Virtual Threads (JEP 444 — Project Loom)
+Enabled globally via `spring.threads.virtual.enabled=true` in `application.properties`. Embedded Tomcat automatically handles every incoming HTTP request on an unpinned, lightweight Virtual Thread. This delivers non-blocking scalability without abandoning standard imperative code for complex reactive paradigms (WebFlux/RxJava).
 
-```java
-// CourseService.java
-public List<List<Student>> getStudentCohorts(Long courseId, int cohortSize) {
-    Course course = courseRepository.findById(courseId)
-            .orElseThrow(() -> new IllegalArgumentException("Course not found"));
+---
 
-    return course.getStudents().stream()
-            .gather(Gatherers.windowFixed(cohortSize))
-            .toList();
-}
-```
+## Tier B: Educational Technology Lab (Isolated Diagnostics)
 
-#### Sequenced Collections (JEP 431)
-Entity collections now utilize standardized, symmetric sequence operations (`getFirst()`, `getLast()`, `reversed()`) instead of manual index calculations:
+> **Architectural Transparency:** Features in this tier are explicitly quarantined from standard CRUD operations. They exist to benchmark and verify bleeding-edge Java capabilities within a dedicated **System Diagnostics** module (`SystemModernFeaturesController` and UI tab `Java25Dashboard`).
 
-```java
-// Course.java
-public Student getFirstEnrolledStudent() {
-    return students.isEmpty() ? null : students.getFirst();
-}
-
-public SequencedCollection<Student> getStudentsReversed() {
-    return students.reversed();
-}
-```
-
-#### Virtual Threads (JEP 444 — Project Loom)
-- **Application-wide:** Enabled in `application.properties` with `spring.threads.virtual.enabled=true`, allowing Tomcat to handle each HTTP request on a lightweight Virtual Thread.
-- **Dedicated Workload Executor:** `VirtualThreadService` dispatches concurrent background tasks using `Executors.newVirtualThreadPerTaskExecutor()`, demonstrating high-throughput non-blocking execution:
-
-```java
-// VirtualThreadService.java
-try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-    List<Future<TaskResult>> futures = sanitizedTasks.stream()
-            .map(task -> executor.submit(() -> {
-                Thread current = Thread.currentThread(); // current.isVirtual() == true
-                Thread.sleep(simulatedIoMs);
-                return new TaskResult(task, current.isVirtual(), current.toString(), "Completed");
-            }))
-            .toList();
-    return futures.stream().map(Future::get).toList();
-}
-```
-
-#### Foreign Function & Memory (FFM) API (JEP 454 — Project Panama)
-Replaces fragile JNI bridges with standard, type-safe native interop:
-- **Foreign Functions:** Direct C-library downcall to libc `getpid` using `Linker.nativeLinker()` and `downcallHandle`.
-- **Foreign Memory:** Safe off-heap memory allocation via `Arena.ofConfined()` and `MemorySegment` to compute 64-bit FNV-1a digests with deterministic deallocation:
+### 1. Foreign Function & Memory (FFM) API (JEP 454 — Project Panama)
+Replaces legacy JNI with type-safe native interoperability without requiring native C compilation:
+- **Foreign Functions:** Direct C-library downcall to libc `getpid()` using `Linker.nativeLinker()` and cached `MethodHandle`.
+- **Foreign Memory:** Safe off-heap memory allocation via `Arena.ofConfined()` and `MemorySegment` to compute 64-bit FNV-1a checksums with deterministic deallocation:
 
 ```java
 // NativeSystemBridge.java
@@ -230,38 +329,58 @@ try (Arena arena = Arena.ofConfined()) {
 }
 ```
 
----
+### 2. Stream Gatherers (JEP 461 / JEP 473 — Preview)
+Demonstrates custom windowing and chunking logic via `Gatherers.windowFixed(cohortSize)`, partitioning student enrollments into cohorts without imperative loop counters.
 
-### 2. Spring Boot 3.4.2 & Architecture Refactoring
-
-- **Centralized `@RestControllerAdvice`:** Introduced `GlobalExceptionHandler` to handle `IllegalArgumentException` (400), `MethodArgumentNotValidException` (400 with detailed field validation errors), and `DataIntegrityViolationException` (409 Conflict), completely eliminating unhandled 500 errors and stack trace leaks.
-- **N+1 Query Elimination:** In `CourseService`, multiple single-entity lookups were replaced by single batch queries using `personRepository.findAllById(ids)` mapped in memory.
-- **Server-Side Filtering via JPQL:** `PersonRepository` now queries specifically by type (`TYPE(p) = :type`) and case-insensitive prefix (`findByLastNameStartingWithIgnoreCase`), shifting filtering responsibility back to the database.
-- **Production Profile Hardening & Persistent Storage:** Configured PostgreSQL 16 with Flyway migrations (`V1__init_schema.sql`) for robust, persistent storage, while Hibernate validates the schema (`ddl-auto=validate`) instead of ephemeral in-memory persistence.
-- **H2 Console Disabled in Prod:** `application-prod.properties` explicitly disables the H2 console (`spring.h2.console.enabled=false`), while Docker sets `SPRING_PROFILES_ACTIVE=prod`.
-
----
-
-### 3. Frontend Architecture Modernization (React 18)
-
-- **Custom Hook Separation (`usePersons`):** Extracted network requests, loading states, and filtering out of view components.
-- **Race Condition Prevention:** Implemented request sequence tracking (`latestRequestIdRef`) to discard stale asynchronous search responses when typing rapidly.
-- **Component Decomposition:** Broken down monolithic views into modular components (`PersonFormModal`, `PersonViewModal`).
-- **Global User Feedback (`ToastContext`):** Replaced silent `.catch(console.error)` handlers and raw `[object Object]` displays with an interactive, multi-type toast notification system.
-- **Internationalization (`I18nProvider`):** Added dynamic multi-language support (English, Spanish, French) with automatic browser locale detection and persistent user preferences.
-- **Interactive `Java25Dashboard`:** Created a dedicated UI dashboard tab allowing users to trigger Virtual Threads live, visualize sequential vs. concurrent execution speedups, invoke off-heap native memory hashing, and monitor domain audit logs in real time.
+### 3. Interactive Concurrency Dashboard (`Java25Dashboard.js`)
+A live UI interface allowing engineers to:
+- Dispatch parallel workloads across Virtual Threads and measure real-time speedup vs. sequential execution.
+- Trigger off-heap native memory hashing and inspect CPU architecture diagnostics.
+- Stream sealed domain audit logs in real time.
 
 ---
 
-### 4. Container & Infrastructure Fixes
+# Act IV: The Senior AI Engineering Manifesto
 
-- **PostgreSQL 16 Service with Healthchecks:** Integrated `postgres:16-alpine` into `docker-compose.yml` with automated healthchecks (`pg_isready`), persistent volume mounting (`postgres_data`), and strict startup ordering (`service_healthy`).
-- **Multi-Stage Non-Root Dockerfile:** Updated the Java runtime to OpenJDK 25 and created an unprivileged system user (`USER appuser`).
-- **Docker Build-Arg Scope Fix:** Moved `ARG REACT_APP_API_URL` below the `FROM` declaration in `frontend/Dockerfile`, correctly passing environment variables into the React build bundle.
-- **Reverse Proxy with Security Headers:** Configured `nginx` (`default.conf`) to forward `/api/` traffic to the backend container while injecting security headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`).
+What separates an amateur "Vibe Coder" from a **Senior Engineer leveraging AI as a Force Multiplier**?
+
+| Area | Junior with AI (Prompt & Accept) | Senior Engineer Governing AI |
+|---|---|---|
+| **Primary Objective** | *"Get something running on localhost ASAP"* | Model domain invariants and enforce system boundaries |
+| **Upgrade Mindset** | Passive version bump; changes only what breaks compilation | **Active Modernization:** Exploits new platform primitives to deliver a better product |
+| **Architectural Judgment** | Pushes business logic to wherever code compiles first (e.g., client-side filtering) | Enforces separation of concerns (API contracts, DB indexing, JPA boundaries) |
+| **Technology Selection** | Resume-Driven Development (adopts every new JEP without asking why) | Applies **YAGNI**; isolates experimental tech from production domain logic |
+| **Testing Philosophy** | Chases high line coverage (tests that mirror code bugs) | Tests business invariants, edge cases, error boundaries, and race conditions |
+| **Data & Persistence** | Ephemeral in-memory databases with auto-generated schemas | Persistent RDBMS (PostgreSQL) with versioned migrations (**Flyway**) |
+| **Operational Reality** | Ignores container security, root privileges, and proxy headers | Enforces non-root execution, orchestrated healthchecks, and defense-in-depth |
+| **The Role of AI** | Unchecked author that dictates the design | Fast junior pair-programmer operating under strict architectural constraints |
+
+### Rules of Engagement for Senior AI Engineering
+
+1. **Upgrades are Value Drivers, Not Maintenance Chores:** Use AI to eliminate the historical friction of deep refactoring. Don't settle for running legacy code on a modern runtime; transform the codebase to leverage the platform's newest superpowers.
+2. **Define the Model Before Writing Prompts:** If you don't define what an entity represents and what invariants can never be violated, the AI will invent the path of least resistance.
+3. **Never Let the Same Agent Generate Both the Logic and the Test Invariants:** An AI prompted to "write tests for this code" will write tests that guarantee current behavior, not correct behavior. Write test assertions against business requirements.
+4. **Reject Unjustified Complexity:** When an AI suggests complex patterns or bleeding-edge dependencies, demand a trade-off justification: *What failure mode does this prevent? What operational cost does it add?*
+5. **Treat Localhost Success as Step Zero:** A service that runs on your laptop is not production software until it has deterministic schema migrations, non-root containerization, structured error logging, and resilient client communication.
 
 ---
 
-## Status
+## Testing & Verification
 
-Active & Modernized. While initially authored entirely by an unreviewed AI prompt experiment, this repository now serves as a production-grade showcase for modern Java 25 features, Virtual Threads, the FFM API, clean Spring Boot architecture, and modular React design.
+The suite exercises full HTTP lifecycles, database constraints, pattern matching validation, and concurrency performance:
+
+```bash
+# Run unit & integration tests with preview enabled
+mvn test
+
+# Generate JaCoCo code coverage report
+mvn test jacoco:report
+```
+
+Reports are output to `target/site/jacoco/index.html`.
+
+---
+
+## License
+
+MIT License. Designed as an educational reference architecture for modern Java, Spring Boot, React, and AI-assisted software engineering.

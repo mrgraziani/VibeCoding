@@ -313,6 +313,15 @@ class PersonCrudApplicationTests {
     }
 
     @Test
+    void testListPersonsPaged() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/persons?page=0&size=5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.size").value(5))
+                .andExpect(jsonPath("$.number").value(0));
+    }
+
+    @Test
     void testApplicationClassInstantiation() {
         assertThat(new PersonCrudApplication()).isNotNull();
         PersonCrudApplication.main(new String[]{"--spring.main.web-application-type=none"});

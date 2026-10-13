@@ -52,8 +52,14 @@ public class CourseController {
     }
 
     @GetMapping
-    public List<CourseDto> list() {
-        return service.findAll().stream().map(this::toDto).toList();
+    public ResponseEntity<?> list(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        if (page != null) {
+            int pageSize = (size != null && size > 0 && size <= 100) ? size : 20;
+            return ResponseEntity.ok(service.findAll(org.springframework.data.domain.PageRequest.of(page, pageSize)).map(this::toDto));
+        }
+        return ResponseEntity.ok(service.findAll().stream().map(this::toDto).toList());
     }
 
     @GetMapping("/{id}")

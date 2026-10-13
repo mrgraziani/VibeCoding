@@ -4,6 +4,8 @@ import com.example.personcrud.model.Person;
 import com.example.personcrud.model.Student;
 import com.example.personcrud.model.Teacher;
 import com.example.personcrud.repository.PersonRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,10 @@ public class PersonService {
 
     public List<Person> findAll() {
         return repository.findAll();
+    }
+
+    public Page<Person> findAll(Pageable pageable) {
+        return repository.findAll(pageable);
     }
 
     public Optional<Person> findById(Long id) {
