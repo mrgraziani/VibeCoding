@@ -4,11 +4,8 @@ WORKDIR /build
 # Install Maven in build image
 RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
 
-# Copy pom.xml first and pre-fetch dependencies for efficient Docker layer caching
+# Copy pom.xml and source code
 COPY pom.xml .
-RUN mvn dependency:go-offline -B || true
-
-# Copy sources and build the package
 COPY src ./src
 RUN mvn -B -DskipTests package
 
