@@ -84,11 +84,10 @@ public class CourseController {
         return ResponseEntity.noContent().build();
     }
 
-    // --- Modern Feature Endpoints ---
-
-    /**
-     * Exposes Stream Gatherers (cohort windows) over HTTP.
-     */
+    // --- Educational Feature Endpoints (Stream Gatherers & Sequenced Collections) ---
+    // ARCHITECTURAL NOTE: In production REST APIs, client ordering and windowing are typically
+    // handled at the UI/service boundary. These endpoints are provided as runtime verifications
+    // for Stream Gatherers (JEP 461/473) and Sequenced Collections (JEP 431).
     @GetMapping("/{id}/cohorts")
     public List<List<Long>> getCohorts(@PathVariable Long id, @RequestParam(defaultValue = "3") int size) {
         if (size <= 0 || size > 100) {

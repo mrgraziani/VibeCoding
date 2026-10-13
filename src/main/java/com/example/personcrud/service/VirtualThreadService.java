@@ -6,7 +6,12 @@ import java.util.List;
 import java.util.concurrent.*;
 
 /**
- * Demonstrates Java 21+ Virtual Threads (JEP 444).
+ * Educational & Diagnostic Concurrency Service: Java 21+ Virtual Threads (JEP 444).
+ *
+ * ARCHITECTURAL DESIGN NOTE (SENIOR GOVERNANCE):
+ * While standard HTTP requests are handled transparently by Tomcat via 'spring.threads.virtual.enabled=true',
+ * this service provides an isolated playground and telemetry generator for concurrent batch tasks,
+ * allowing live visualization of Loom lightweight thread scheduling without affecting business domain threads.
  */
 @Service
 public class VirtualThreadService {

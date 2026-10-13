@@ -9,9 +9,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Controller exposing the modern Java 21-25 features for inspection & verification:
- * - Virtual Threads
- * - Foreign Function & Memory (FFM) API
+ * Educational & Diagnostic System Controller (/api/system).
+ *
+ * ARCHITECTURAL DESIGN NOTE (SENIOR GOVERNANCE):
+ * This controller deliberately isolates experimental and platform-level Java 21-25 features
+ * (Project Panama Foreign Function & Memory API, Virtual Thread dispatch benchmarking,
+ * and system diagnostics) from core academic domain services.
+ *
+ * In enterprise architecture, low-level native interop and synthetic concurrency benchmarks
+ * must remain strictly quarantined from transactional business entities.
  */
 @RestController
 @RequestMapping("/api/system")

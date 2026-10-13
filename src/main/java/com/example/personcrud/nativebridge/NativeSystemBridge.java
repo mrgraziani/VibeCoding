@@ -8,9 +8,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
- * Demonstrates the Java Foreign Function & Memory (FFM) API (JEP 454).
- * Uses Arena and MemorySegment for safe off-heap allocation, and Linker
- * for native C function invocation without JNI.
+ * Educational & Diagnostic Bridge: Java Foreign Function & Memory (FFM) API (JEP 454).
+ *
+ * ARCHITECTURAL DESIGN NOTE (SENIOR GOVERNANCE):
+ * Uses Arena and MemorySegment for safe off-heap allocation, and Linker for native C function
+ * invocation without JNI. This service is intentionally isolated within the 'nativebridge' package
+ * and consumed exclusively by the diagnostics lab (/api/system), keeping the core business domain
+ * pure and free of native C interop dependencies.
  */
 @Service
 public class NativeSystemBridge {
