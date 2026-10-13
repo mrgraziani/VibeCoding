@@ -127,20 +127,23 @@ graph TD
   - `DataIntegrityViolationException` → 409 Conflict (handling unique email and foreign key violations gracefully)
   - `Exception` → 500 Internal Server Error with sanitized error messages to prevent stack trace leaks
 - **N+1 Query Elimination:** In `CourseService`, sequential single-entity lookups in loops were replaced by batch fetching via `personRepository.findAllById(ids)` and in-memory hash indexing, reducing database roundtrips from $O(N)$ to $O(1)$.
-- **Database-Level Filtering:** Relocated role and prefix search from client-side memory to indexed JPQL queries (`TYPE(p) = :type` and `findByLastNameStartingWithIgnoreCase`), backed by database index `idx_person_lastname`.
+- **Database-Level Filtering & Semantic Endpoints:** Introduced dedicated `/api/teachers` and `/api/students` REST controllers, ending the anti-pattern of single-table client filtering and enforcing domain boundaries at the API gateway.
+- **Paging & Resource Bounds:** Added Spring Data `Pageable` pagination across all collection endpoints (`?page=0&size=20`) to prevent unbounded memory spikes.
 
 ### 3. Container Hardening & Operational Security
 - **Multi-Stage Non-Root Docker Build:** Refactored `Dockerfile` into a multi-stage builder creating an unprivileged system user (`USER appuser`), mitigating container breakout vulnerabilities.
 - **Reverse Proxy Architecture:** Configured Nginx (`default.conf`) to serve static React artifacts while reverse-proxying `/api/` traffic to the backend container.
-- **HTTP Security Headers:** Nginx enforces enterprise defense-in-depth headers:
+- **Perimeter Defense:** Restricted direct host backend binding to `127.0.0.1:8080`, routing external traffic through Nginx to enforce security headers:
   - `X-Frame-Options: SAMEORIGIN` (Clickjacking mitigation)
   - `X-Content-Type-Options: nosniff` (MIME-sniffing protection)
   - `Referrer-Policy: strict-origin-when-cross-origin`
   - `X-XSS-Protection: 1; mode=block`
+- **Environment Profile Isolation:** Annotated `DataInitializer` with `@Profile("!prod")` to ensure test seeders never execute in production PostgreSQL environments.
 - **Docker Build-Arg Scope Fix:** Relocated `ARG REACT_APP_API_URL` below the `FROM node:18-alpine` line, ensuring build parameters properly inject into the Webpack/React production bundle.
 
 ### 4. Frontend Engineering Discipline
 - **Modular Component Hierarchy:** Decomposed monolithic views into focused, reusable components (`CourseFormModal`, `CourseViewModal`, `PersonFormModal`, `PersonViewModal`).
+- **Direct Domain Ingestion:** Updated `useCourses` and `usePersons` to consume `/api/teachers` and `/api/students` directly, completely eliminating client-side entity filtering.
 - **Custom Hook Separation:** Extracted data fetching, caching, and state transitions into dedicated hooks (`usePersons`, `useCourses`).
 - **Asynchronous Race Condition Defense:** Implemented sequence request tracking via `useRef(latestRequestIdRef)` in `usePersons`. Rapid typing in search inputs automatically discards stale out-of-order network responses.
 - **Internationalization (i18n):** Built dynamic localization (`I18nProvider`) supporting English, Spanish, and French with automatic browser locale negotiation and local storage persistence.

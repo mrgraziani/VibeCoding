@@ -31,6 +31,24 @@ export function usePersons(filterType) {
           ? `/persons/search?lastName=${encodeURIComponent(query.trim())}&personType=${encodeURIComponent(filterType)}`
           : `/persons/search?lastName=${encodeURIComponent(query.trim())}`;
         res = await apiClient.get(url);
+      } else if (filterType === PERSON_ROLES.TEACHER) {
+        try {
+          res = await apiClient.get('/teachers');
+          if (!res?.data || (!Array.isArray(res.data) && !res.data?.content)) {
+            throw new Error();
+          }
+        } catch (_) {
+          res = await apiClient.get('/persons');
+        }
+      } else if (filterType === PERSON_ROLES.STUDENT) {
+        try {
+          res = await apiClient.get('/students');
+          if (!res?.data || (!Array.isArray(res.data) && !res.data?.content)) {
+            throw new Error();
+          }
+        } catch (_) {
+          res = await apiClient.get('/persons');
+        }
       } else {
         res = await apiClient.get('/persons');
       }
@@ -40,11 +58,12 @@ export function usePersons(filterType) {
         return;
       }
 
-      const list = res.data || [];
+      const raw = res?.data || [];
+      const list = Array.isArray(raw) ? raw : (raw.content || []);
       if (filterType === PERSON_ROLES.STUDENT) {
-        setPersons(list.filter(p => p.personType === PERSON_ROLES.STUDENT));
+        setPersons(list.filter(p => !p.personType || p.personType === PERSON_ROLES.STUDENT));
       } else if (filterType === PERSON_ROLES.TEACHER) {
-        setPersons(list.filter(p => p.personType === PERSON_ROLES.TEACHER));
+        setPersons(list.filter(p => !p.personType || p.personType === PERSON_ROLES.TEACHER));
       } else {
         setPersons(list);
       }

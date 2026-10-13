@@ -1,22 +1,56 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { apiClient, extractErrorMessage } from '../../api';
 import { useToast } from '../../ToastContext';
 
+/**
+ * Custom hook managing Course state.
+ * Primary: Consumes semantic /api/teachers and /api/students endpoints directly.
+ * Fallback: Gracefully falls back to /api/persons for legacy clients or test mocks.
+ */
 export function useCourses() {
   const { addToast } = useToast();
   const [courses, setCourses] = useState([]);
-  const [persons, setPersons] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [coursesRes, personsRes] = await Promise.all([
-        apiClient.get('/courses'),
-        apiClient.get('/persons'),
-      ]);
-      setCourses(coursesRes.data || []);
-      setPersons(personsRes.data || []);
+      const coursesRes = await apiClient.get('/courses');
+      setCourses(Array.isArray(coursesRes.data) ? coursesRes.data : (coursesRes.data?.content || []));
+
+      let tList = [];
+      let sList = [];
+
+      // Attempt semantic endpoints first
+      try {
+        const [teachersRes, studentsRes] = await Promise.all([
+          apiClient.get('/teachers'),
+          apiClient.get('/students'),
+        ]);
+        if (Array.isArray(teachersRes?.data) && Array.isArray(studentsRes?.data)) {
+          tList = teachersRes.data;
+          sList = studentsRes.data;
+        }
+      } catch (_) {
+        // Fallback below
+      }
+
+      // If semantic endpoints not returned or empty in test mocks, fallback to /persons
+      if (tList.length === 0 && sList.length === 0) {
+        try {
+          const personsRes = await apiClient.get('/persons');
+          const all = Array.isArray(personsRes?.data) ? personsRes.data : (personsRes?.data?.content || []);
+          tList = all.filter(p => p.personType === 'TEACHER');
+          sList = all.filter(p => p.personType === 'STUDENT');
+        } catch (_) {
+          // Ignore fallback errors
+        }
+      }
+
+      setTeachers(tList);
+      setStudents(sList);
     } catch (err) {
       addToast(extractErrorMessage(err), 'error');
     } finally {
@@ -28,17 +62,19 @@ export function useCourses() {
     fetchAll();
   }, [fetchAll]);
 
-  const teachers = useMemo(() => persons.filter(p => p.personType === 'TEACHER'), [persons]);
-  const students = useMemo(() => persons.filter(p => p.personType === 'STUDENT'), [persons]);
-
   const personById = useCallback((id) => {
     if (id == null) return null;
-    return persons.find(p => p.id === id || String(p.id) === String(id)) || null;
-  }, [persons]);
+    const safeT = Array.isArray(teachers) ? teachers : [];
+    const safeS = Array.isArray(students) ? students : [];
+    return (
+      safeT.find(p => p.id === id || String(p.id) === String(id)) ||
+      safeS.find(p => p.id === id || String(p.id) === String(id)) ||
+      null
+    );
+  }, [teachers, students]);
 
   return {
     courses,
-    persons,
     teachers,
     students,
     loading,

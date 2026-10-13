@@ -213,7 +213,7 @@ describe('PersonCrud Component', () => {
     fireEvent.click(clearBtn);
 
     await waitFor(() => {
-      expect(apiClient.get).toHaveBeenCalledWith('/persons');
+      expect(apiClient.get).toHaveBeenCalledWith('/students');
     });
   });
 

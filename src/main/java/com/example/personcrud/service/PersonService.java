@@ -89,4 +89,70 @@ public class PersonService {
     public void delete(Long id) {
         repository.deleteById(id);
     }
+
+    // --- Dedicated Teacher domain operations ---
+
+    public List<Teacher> findAllTeachers() {
+        return repository.findAllByType(Teacher.class).stream()
+                .filter(Teacher.class::isInstance)
+                .map(Teacher.class::cast)
+                .toList();
+    }
+
+    public Page<Teacher> findAllTeachers(Pageable pageable) {
+        return repository.findAllByType(Teacher.class, pageable).map(p -> (Teacher) p);
+    }
+
+    public Optional<Teacher> findTeacherById(Long id) {
+        return repository.findByIdAndType(id, Teacher.class).map(p -> (Teacher) p);
+    }
+
+    @Transactional
+    public Teacher createTeacher(Teacher teacher) {
+        teacher.setId(null);
+        return (Teacher) repository.save(teacher);
+    }
+
+    @Transactional
+    public Optional<Teacher> updateTeacher(Long id, Teacher teacher) {
+        return findTeacherById(id).map(existing -> {
+            existing.setFirstName(teacher.getFirstName());
+            existing.setLastName(teacher.getLastName());
+            existing.setEmail(teacher.getEmail());
+            return (Teacher) repository.save(existing);
+        });
+    }
+
+    // --- Dedicated Student domain operations ---
+
+    public List<Student> findAllStudents() {
+        return repository.findAllByType(Student.class).stream()
+                .filter(Student.class::isInstance)
+                .map(Student.class::cast)
+                .toList();
+    }
+
+    public Page<Student> findAllStudents(Pageable pageable) {
+        return repository.findAllByType(Student.class, pageable).map(p -> (Student) p);
+    }
+
+    public Optional<Student> findStudentById(Long id) {
+        return repository.findByIdAndType(id, Student.class).map(p -> (Student) p);
+    }
+
+    @Transactional
+    public Student createStudent(Student student) {
+        student.setId(null);
+        return (Student) repository.save(student);
+    }
+
+    @Transactional
+    public Optional<Student> updateStudent(Long id, Student student) {
+        return findStudentById(id).map(existing -> {
+            existing.setFirstName(student.getFirstName());
+            existing.setLastName(student.getLastName());
+            existing.setEmail(student.getEmail());
+            return (Student) repository.save(existing);
+        });
+    }
 }
